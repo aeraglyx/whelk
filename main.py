@@ -82,7 +82,8 @@ class Layout:
 		
 		with open(corpus_file) as file:
 
-			char_prev = None
+			key_prev = None
+			score = 0.0
 			same_hand_streak = 0
 			same_finger_streak = 0
 
@@ -92,31 +93,36 @@ class Layout:
 				if not char:
 					break
 
-				if not char_prev:
+				key = next((key for key in self.keys if key.char == char), None)
+				
+				if not key:
+					continue
+				if not key_prev:
+					key_prev = key
 					continue
 
-				if char.hand == char_prev.hand:
+				if key.hand == key_prev.hand:
 					# same hand
 					same_hand_streak += 1
 					
-					if char.finger == char_prev.finger:
+					if key.finger == key_prev.finger:
 						# SFB
 						score += SBF_PENALTY
 					
-					if char.finger < char_prev.finger:
+					if key.finger < key_prev.finger:
 						# inward roll
 						roll_streak += 1
 						score += INWARD_ROLL
-					if char.finger > char_prev.finger:
+					if key.finger > key_prev.finger:
 						# outward roll
 						roll_streak += 1
 						score += OUTWARD_ROLL
 					
-					else:
-						roll_streak += 1
-						if char.finger < char_prev.finger:
-							# inward roll
-							score += INWARD_ROLL
+					# else:
+					# 	roll_streak += 1
+					# 	if key.finger < key_prev.finger:
+					# 		# inward roll
+					# 		score += INWARD_ROLL
 
 				else:
 					# alternating
@@ -124,7 +130,8 @@ class Layout:
 					score += 0.1 * same_hand_streak ** 2
 					same_hand_streak = 1
 
-				char_prev = char
+				key_prev = key
+				print(score)
 
 
 	def mirror(self):
@@ -136,20 +143,16 @@ class Layout:
 			print(key.finger)
 
 
-	def print_layout(self):
-		
-		for i, key in enumerate(self.keys):
-			
-			if i % 8 == 7:
-				end = "\n"
-			elif i % 8 == 3:
-				end = "  "
-			else:
-				end = " "
-			
-			print(f"{'-' if key.char == None else key.char}", end=end)
-		
-		print("\n", end="")
+	# def print_layout(self):
+	# 	for i, key in enumerate(self.keys):
+	# 		if i % 8 == 7:
+	# 			end = "\n"
+	# 		elif i % 8 == 3:
+	# 			end = "  "
+	# 		else:
+	# 			end = " "
+	# 		print(f"{'-' if key.char == None else key.char}", end=end)
+	# 	print("\n", end="")
 
 
 	def __str__(self):
@@ -192,12 +195,13 @@ class Letter:
 # layout.print_layout()
 
 layout = Layout()
+print(layout)
 
 corpus_file = "corpus.txt"
-# layout.analyze(corpus_file)
+layout.analyze(corpus_file)
+
 # print("\n", end="")
 # layout.print_layout()
-print(layout)
 
 
 

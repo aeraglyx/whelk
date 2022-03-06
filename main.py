@@ -1,62 +1,189 @@
-#    02 12 22 32 42    52 62 72 82 92
-#    01 11 21 31 41    51 61 71 81 91
-#    00 10 20 30 40    50 60 70 80 90
+#  02 12 22 32 42 52 62 72 82 92
+#  01 11 21 31 41 51 61 71 81 91
+#  00 10 20 30 40 50 60 70 80 90
+    
+#   02 12 22 32   42 52 62 72
+#   01 11 21 31   41 51 61 71
+#   00 10 20 30   40 50 60 70
+
+chars = {
+	"a": None,
+	"b": None,
+	"c": None,
+	"d": None,
+	"e": None,
+	"f": None,
+	"g": None,
+	"h": None,
+	"i": None,
+	"j": None,
+	"k": None,
+	"l": None,
+	"m": None,
+	"n": None,
+	"o": None,
+	"p": None,
+	"q": None,
+	"r": None,
+	"s": None,
+	"t": None,
+	"u": None,
+	"v": None,
+	"w": None,
+	"x": None,
+	"y": None,
+	"z": None
+}
 
 
 class Layout:
+
 	def __init__(self):
 
-		# keys = [Key(hand, finger, letter) for ]
-		# self.k00 = Key('left', 4, None)
-		# self.k10 = Key('left', 4, None)
-		# self.k20 = Key('left', 4, None)
-		# self.k30 = Key('left', 4, None)
-		# self.k40 = Key('left', 4, None)
-		pass
+		row = [
+			2, 2, 2, 2, 2, 2, 2, 2,
+			1, 1, 1, 1, 1, 1, 1, 1,
+			0, 0, 0, 0, 0, 0, 0, 0,
+			# -1, -1, -1, -1, -1, -1, -1, -1
+		]
+		
+		finger = [
+			4, 3, 2, 1, 1, 2, 3, 4,
+			4, 3, 2, 1, 1, 2, 3, 4,
+			4, 3, 2, 1, 1, 2, 3, 4
+		]
+
+		hand = [
+			"left", "left", "left", "left", "right", "right", "right", "right",
+			"left", "left", "left", "left", "right", "right", "right", "right",
+			"left", "left", "left", "left", "right", "right", "right", "right"
+		]
+
+		char = [
+			None, None, None, None, None, None, None, None,
+			None, None, "a", None, None, None, None, None,
+			None, None, None, None, None, None, None, None
+		]
+
+		self.keys = [Key(hand, finger, row, char) for hand, finger, row, char in zip(hand, finger, row, char)]
+		
 	
 	def analyze(self, corpus_file):
+
+		SBF_PENALTY = 1.0
+		INWARD_ROLL = -0.5
+		OUTWARD_ROLL = 0.0
+
+		#  0 - thumb
+		#  1 - index
+		#  2 - middle
+		#  3 - ring
+		#  4 - little
 		
 		with open(corpus_file) as file:
-			# for line in file:
-			# 	for char in line:
+
+			char_prev = None
 			same_hand_streak = 0
+			same_finger_streak = 0
+
 			while True:
+
 				char = file.read(1)
 				if not char:
 					break
 
-				print(char)
-				char_prev = char
+				if not char_prev:
+					continue
 
 				if char.hand == char_prev.hand:
-					# penalty
+					# same hand
 					same_hand_streak += 1
-					pass
+					
+					if char.finger == char_prev.finger:
+						# SFB
+						score += SBF_PENALTY
+					
+					if char.finger < char_prev.finger:
+						# inward roll
+						roll_streak += 1
+						score += INWARD_ROLL
+					if char.finger > char_prev.finger:
+						# outward roll
+						roll_streak += 1
+						score += OUTWARD_ROLL
+					
+					else:
+						roll_streak += 1
+						if char.finger < char_prev.finger:
+							# inward roll
+							score += INWARD_ROLL
+
+				else:
+					# alternating
+					#  streak ended - penalty
+					score += 0.1 * same_hand_streak ** 2
+					same_hand_streak = 1
+
+				char_prev = char
+
+
+	def mirror(self):
+		pass
+
+
+	def debug(self):
+		for key in self.keys:
+			print(key.finger)
 
 
 	def print_layout(self):
-		k00 = self.k00.letter.char
-		k10 = self.k10.letter.char
-		k20 = self.k20.letter.char
-		k30 = self.k30.letter.char
-		k40 = self.k40.letter.char
-		print(f"""
-			{k00} {k10} {k20} {k30} {k40}   {k00} {k00} {k00} {k00} {k00}\n
-			{k00} {k10} {k20} {k30} {k40}   {k00} {k00} {k00} {k00} {k00}
-		""")
+		
+		for i, key in enumerate(self.keys):
+			
+			if i % 8 == 7:
+				end = "\n"
+			elif i % 8 == 3:
+				end = "  "
+			else:
+				end = " "
+			
+			print(f"{'-' if key.char == None else key.char}", end=end)
+		
+		print("\n", end="")
+
+
+	def __str__(self):
+
+		string = ""
+		
+		for i, key in enumerate(self.keys):
+
+			to_add = '-' if key.char == None else key.char
+			string += to_add
+			
+			if i == 7 or i == 15:
+				string += "\n"
+			elif i % 8 == 3:
+				string += "  "
+			else:
+				string += " "
+		
+		return string
+
+				
+
 
 class Key:
-	def __init__(self, hand, finger, letter):
+	def __init__(self, hand, finger, row, char):
 		self.hand = hand
 		self.finger = finger
-		self.letter = letter
+		self.row = row
+		self.char = char
 
 class Letter:
 	def __init__(self, char, freq):
 		self.char = char
 		self.freq = freq
-
-layout = Layout()
 
 # a = Letter(char="a", freq=0.082)
 
@@ -64,8 +191,13 @@ layout = Layout()
 
 # layout.print_layout()
 
-corpus_file = "corpus_01.txt"
-layout.analyze(corpus_file)
+layout = Layout()
+
+corpus_file = "corpus.txt"
+# layout.analyze(corpus_file)
+# print("\n", end="")
+# layout.print_layout()
+print(layout)
 
 
 

@@ -54,7 +54,41 @@ freq_en = [
 	0.01974,
 	0.00074]
 
+abc = [
+	"a",
+	"b",
+	"c",
+	"d",
+	"e",
+	"f",
+	"g",
+	"h",
+	"i",
+	"j",
+	"k",
+	"l",
+	"m",
+	"n",
+	"o",
+	"p",
+	"q",
+	"r",
+	"s",
+	"t",
+	"u",
+	"v",
+	"w",
+	"x",
+	"y",
+	"z"]
 
-freq_mixed = [round((en + cs) * 0.5, 7) for en, cs in zip(freq_en, freq_cs)]
-print(freq_mixed)
-print(sum(freq_cs))
+mix = 1.0
+freq_mixed = [(1.0 - mix) * en + mix * cs for en, cs in zip(freq_en, freq_cs)]
+# print(freq_mixed)
+# print(sum(freq_cs))
+
+
+sorted = [abc for _, abc in sorted(zip(freq_mixed, abc))]
+
+print(f"{mix = }")
+print(sorted)

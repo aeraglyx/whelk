@@ -1,3 +1,5 @@
+import time
+
 #  02 12 22 32 42 52 62 72 82 92
 #  01 11 21 31 41 51 61 71 81 91
 #  00 10 20 30 40 50 60 70 80 90
@@ -46,26 +48,24 @@ class Layout:
 			0, 0, 0, 0, 0, 0, 0, 0,
 			# -1, -1, -1, -1, -1, -1, -1, -1
 		]
-		
 		finger = [
 			4, 3, 2, 1, 1, 2, 3, 4,
 			4, 3, 2, 1, 1, 2, 3, 4,
 			4, 3, 2, 1, 1, 2, 3, 4
 		]
-
 		hand = [
 			"left", "left", "left", "left", "right", "right", "right", "right",
 			"left", "left", "left", "left", "right", "right", "right", "right",
 			"left", "left", "left", "left", "right", "right", "right", "right"
 		]
-
 		char = [
-			None, None, None, None, None, None, None, None,
-			None, None, "a", None, None, None, None, None,
-			None, None, None, None, None, None, None, None
+			"q", "w", "f", "p", None, None, None, None,
+			"a", "r", "s", "t", None, None, None, None,
+			"z", "x", "c", "d", None, None, None, None
 		]
 
 		self.keys = [Key(hand, finger, row, char) for hand, finger, row, char in zip(hand, finger, row, char)]
+		self.score = None
 		
 	
 	def analyze(self, corpus_file):
@@ -79,19 +79,26 @@ class Layout:
 		#  2 - middle
 		#  3 - ring
 		#  4 - little
+
+		start_time = time.perf_counter()
 		
 		with open(corpus_file) as file:
+
+			chars_total = 0
 
 			key_prev = None
 			score = 0.0
 			same_hand_streak = 0
 			same_finger_streak = 0
+			roll_streak = 0
 
 			while True:
 
 				char = file.read(1)
 				if not char:
 					break
+				
+				chars_total += 1
 
 				key = next((key for key in self.keys if key.char == char), None)
 				
@@ -131,7 +138,21 @@ class Layout:
 					same_hand_streak = 1
 
 				key_prev = key
-				print(score)
+				print(score / chars_total)
+			# final_score = score / chars_total)
+			# print(final_score)
+		
+		total_time = time.perf_counter() - start_time
+
+		self.score = score
+		
+		print("\n", end="")
+		print(f"corpus: {corpus_file}")
+		print(f"number of chars: {chars_total}")
+		print("\n", end="")
+		print(f"score: {score / chars_total:.6f}")
+		print(f"time: {total_time:.3f} s")
+		print("\n", end="")
 
 
 	def mirror(self):
@@ -143,38 +164,20 @@ class Layout:
 			print(key.finger)
 
 
-	# def print_layout(self):
-	# 	for i, key in enumerate(self.keys):
-	# 		if i % 8 == 7:
-	# 			end = "\n"
-	# 		elif i % 8 == 3:
-	# 			end = "  "
-	# 		else:
-	# 			end = " "
-	# 		print(f"{'-' if key.char == None else key.char}", end=end)
-	# 	print("\n", end="")
-
-
 	def __str__(self):
-
 		string = ""
-		
 		for i, key in enumerate(self.keys):
-
 			to_add = '-' if key.char == None else key.char
 			string += to_add
-			
 			if i == 7 or i == 15:
 				string += "\n"
 			elif i % 8 == 3:
 				string += "  "
 			else:
 				string += " "
-		
 		return string
 
 				
-
 
 class Key:
 	def __init__(self, hand, finger, row, char):
@@ -197,69 +200,12 @@ class Letter:
 layout = Layout()
 print(layout)
 
-corpus_file = "corpus.txt"
+corpus_file = "corpus_02.txt"
 layout.analyze(corpus_file)
 
 # print("\n", end="")
 # layout.print_layout()
 
-
-
-
-# "A", 0.08200
-# "B", 0.01500
-# "C", 0.02700
-# "D", 0.04300
-# "E", 0.13000
-# "F", 0.02200
-# "G", 0.02000
-# "H", 0.06200
-# "I", 0.06900
-# "J", 0.01500
-# "K", 0.07800
-# "L", 0.04100
-# "M", 0.02500
-# "N", 0.06700
-# "O", 0.07800
-# "P", 0.01900
-# "Q", 0.00096
-# "R", 0.05900
-# "S", 0.06200
-# "T", 0.09600
-# "U", 0.02700
-# "V", 0.00970
-# "W", 0.02400
-# "X", 0.00150
-# "Y", 0.02000
-# "Z", 0.00078
-
-
-# a	0.08087		0.09288
-# b	0.01493		0.00822
-# c	0.02781		0.00779
-# d	0.04253		0.03490
-# e	0.12700		0.05396
-# f	0.02228		0.00084
-# g	0.02015		0.00092
-# h	0.06094		0.03247
-# i	0.06966		0.07716
-# j	0.00153		0.01433
-# k	0.00772		0.02894
-# l	0.04094		0.03802
-# m	0.02587		0.02446
-# n	0.06749		0.06475
-# o	0.07507		0.06719
-# p	0.01929		0.01906
-# q	0.00096		0.00091
-# r	0.05987		0.05179
-# s	0.06234		0.05900
-# t	0.09056		0.05733
-# u	0.02758		0.02409
-# v	0.00978		0.05344
-# w	0.02360		0.00016
-# x	0.00150		0.00027
-# y	0.01974		0.02038
-# z	0.00074		0.02320
 
 
 # https://en.wikipedia.org/wiki/Letter_frequency

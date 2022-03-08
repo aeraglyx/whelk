@@ -107,13 +107,14 @@ class Layout:
 		
 		with open(corpus_file) as file:
 
-			char_count = 0
-
-			key_prev = None
 			score = 0.0
+			char_count = 0
+			key_prev = None
 			same_hand_streak = 0
 			same_finger_streak = 0
 			roll_streak = 0
+
+			sfb_count = 0
 
 			while True:
 
@@ -138,6 +139,7 @@ class Layout:
 					
 					if key.finger == key_prev.finger:
 						# SFB
+						sfb_count += 1
 						score += SBF_PENALTY
 					
 					if key.finger < key_prev.finger:
@@ -166,7 +168,8 @@ class Layout:
 		total_time = time.perf_counter() - start_time
 
 		self.score = score / char_count
-		
+		self.sfb = sfb_count / char_count
+
 		# print("\n", end="")
 		# print(self)
 		# print("\n", end="")
@@ -218,53 +221,47 @@ class Letter:
 
 
 
-corpus_file = "corpus_03.txt"
 
+
+start_time = time.perf_counter()
+
+corpus_file = "corpus_03.txt"
 layout = Layout()
-# print(layout)
 layout.analyze(corpus_file)
 
 ITERATIONS = 16
 POOL_SIZE = 16
 
 layouts = [layout]
-
 for i in range(ITERATIONS):
 
-	print(i)
 	layouts_copy = copy.deepcopy(layouts)
-
 	for layout in layouts_copy:
 
 		new_layouts = []
-
 		while len(new_layouts) < 16:
-			# print("iernst")
 			tmp_layout = copy.deepcopy(layout)
 			tmp_layout.swap_home_row()
 			tmp_layout.swap_not_home_row()
-			# print(len(new_layouts))
 			if layout.char_map == tmp_layout.char_map:
 				continue
-			# print("got here")
 			tmp_layout.update()
 			tmp_layout.analyze(corpus_file)
 			new_layouts.append(tmp_layout)
-			# if tmp_layout.score < layout.score:
-			# 	layout = tmp_layout
-			# else:
-			# 	del tmp_layout
 
 		new_layouts.sort(key=lambda x: x.score, reverse=False)
 		del new_layouts[4:]
-		# print(new_layouts)
 
 		layouts.extend(new_layouts)
 
 	layouts.sort(key=lambda x: x.score, reverse=False)
 	del layouts[16:]
-	# print(layouts)
-		# for layout in layouts:
-		# 	print(layout.score)
+	
+	print("\n", end="")
+	print(f"Iteration {str(i + 1).zfill(len(str(ITERATIONS)))} / {ITERATIONS}")
+	print("Best layout so far:")
+	print(layouts[0])
 
-print(layouts[0])
+print("\n", end="")
+total_time = time.perf_counter() - start_time
+print(f"time: {total_time:.3f} s")

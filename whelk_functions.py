@@ -68,8 +68,8 @@ def get_weird_chars_from_corpus(corpus_file):
 corpus = "corpus.txt"
 
 print("\n")
-chars_to_check = string.ascii_lowercase + string.digits + string.punctuation
-freq = get_char_freq_from_corpus(corpus)
+chars_to_check = string.ascii_lowercase # + string.digits + string.punctuation
+freq = get_char_freq_from_corpus(corpus, chars_to_check)
 
 print_frequencies(freq)
 print("\n")

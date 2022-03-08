@@ -1,4 +1,5 @@
 import time
+import random
 
 #  02 12 22 32 42 52 62 72 82 92
 #  01 11 21 31 41 51 61 71 81 91
@@ -40,33 +41,45 @@ chars = {
 
 class Layout:
 
+
 	def __init__(self):
 
-		row = [
+		self.row_map = [
 			2, 2, 2, 2, 2, 2, 2, 2,
 			1, 1, 1, 1, 1, 1, 1, 1,
 			0, 0, 0, 0, 0, 0, 0, 0,
 			# -1, -1, -1, -1, -1, -1, -1, -1
 		]
-		finger = [
+		self.finger_map = [
 			4, 3, 2, 1, 1, 2, 3, 4,
 			4, 3, 2, 1, 1, 2, 3, 4,
 			4, 3, 2, 1, 1, 2, 3, 4
 		]
-		hand = [
+		self.hand_map = [
 			"left", "left", "left", "left", "right", "right", "right", "right",
 			"left", "left", "left", "left", "right", "right", "right", "right",
 			"left", "left", "left", "left", "right", "right", "right", "right"
 		]
-		char = [
-			"q", "w", "f", "p", None, None, None, None,
-			"a", "r", "s", "t", None, None, None, None,
-			"z", "x", "c", "d", None, None, None, None
+		self.char_map = [
+			"b", "w", "f", "p", "l", "u", "y", "j",
+			"a", "r", "s", "t", "n", "e", "i", "o",
+			"x", "v", "c", "d", "h", "g", "m", "k"
 		]
-
-		self.keys = [Key(hand, finger, row, char) for hand, finger, row, char in zip(hand, finger, row, char)]
-		self.score = None
 		
+		self.score = None
+
+		self.update()
+	
+
+	def update(self):
+		self.char_dict = {}
+		for i, char in enumerate(self.char_map):
+			if char is not None:
+				self.char_dict[char.lower()] = Key(self.hand_map[i], self.finger_map[i], self.row_map[i], self.char_map[i])
+
+	def swap_rnd(self):
+		rnd = random.sample(range(0, 23), 2)
+		self.char_map[rnd[0]], self.char_map[rnd[1]] = self.char_map[rnd[1]], self.char_map[rnd[0]]
 	
 	def analyze(self, corpus_file):
 
@@ -84,7 +97,7 @@ class Layout:
 		
 		with open(corpus_file) as file:
 
-			chars_total = 0
+			char_count = 0
 
 			key_prev = None
 			score = 0.0
@@ -94,16 +107,22 @@ class Layout:
 
 			while True:
 
-				char = file.read(1)
+				char = file.read(1).lower()
 				if not char:
 					break
 				
-				chars_total += 1
+				char_count += 1
 
-				key = next((key for key in self.keys if key.char == char), None)
+				# key = next((key for key in self.keys if key.char == char), None)
+				
+				try:
+					key = self.char_dict[char]
+				except:
+					key = None
 				
 				if not key:
 					continue
+
 				if not key_prev:
 					key_prev = key
 					continue
@@ -138,8 +157,8 @@ class Layout:
 					same_hand_streak = 1
 
 				key_prev = key
-				print(score / chars_total)
-			# final_score = score / chars_total)
+				print(score / char_count)
+			# final_score = score / char_count)
 			# print(final_score)
 		
 		total_time = time.perf_counter() - start_time
@@ -147,10 +166,12 @@ class Layout:
 		self.score = score
 		
 		print("\n", end="")
-		print(f"corpus: {corpus_file}")
-		print(f"number of chars: {chars_total}")
+		print(self)
 		print("\n", end="")
-		print(f"score: {score / chars_total:.6f}")
+		print(f"corpus: {corpus_file}")
+		print(f"number of chars: {char_count}")
+		print("\n", end="")
+		print(f"score: {score / char_count:.6f}")
 		print(f"time: {total_time:.3f} s")
 		print("\n", end="")
 
@@ -160,14 +181,14 @@ class Layout:
 
 
 	def debug(self):
-		for key in self.keys:
+		for key in self.char_map:
 			print(key.finger)
 
 
 	def __str__(self):
 		string = ""
-		for i, key in enumerate(self.keys):
-			to_add = '-' if key.char == None else key.char
+		for i, char in enumerate(self.char_map):
+			to_add = '-' if char == None else char
 			string += to_add
 			if i == 7 or i == 15:
 				string += "\n"
@@ -198,10 +219,14 @@ class Letter:
 # layout.print_layout()
 
 layout = Layout()
+# print(layout)
+
+corpus_file = "corpus_03.txt"
+layout.analyze(corpus_file)
+layout.swap_rnd()
 print(layout)
 
-corpus_file = "corpus_02.txt"
-layout.analyze(corpus_file)
+# print(layout.char_dict["a"].finger)
 
 # print("\n", end="")
 # layout.print_layout()

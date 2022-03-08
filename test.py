@@ -82,7 +82,7 @@ abc = [
 	"y",
 	"z"]
 
-mix = 1.0
+mix = 0.25
 freq_mixed = [(1.0 - mix) * en + mix * cs for en, cs in zip(freq_en, freq_cs)]
 # print(freq_mixed)
 # print(sum(freq_cs))

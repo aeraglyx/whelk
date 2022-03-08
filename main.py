@@ -1,5 +1,6 @@
 import time
 import random
+import copy
 
 #  02 12 22 32 42 52 62 72 82 92
 #  01 11 21 31 41 51 61 71 81 91
@@ -63,7 +64,7 @@ class Layout:
 		self.char_map = [
 			"b", "w", "f", "p", "l", "u", "y", "j",
 			"a", "r", "s", "t", "n", "e", "i", "o",
-			"x", "v", "c", "d", "h", "g", "m", "k"
+			"z", "v", "c", "d", "h", "g", "m", "k"
 		]
 		
 		self.score = None
@@ -112,13 +113,8 @@ class Layout:
 					break
 				
 				char_count += 1
-
-				# key = next((key for key in self.keys if key.char == char), None)
 				
-				try:
-					key = self.char_dict[char]
-				except:
-					key = None
+				key = self.char_dict[char] if char in self.char_dict else None
 				
 				if not key:
 					continue
@@ -157,13 +153,10 @@ class Layout:
 					same_hand_streak = 1
 
 				key_prev = key
-				print(score / char_count)
-			# final_score = score / char_count)
-			# print(final_score)
 		
 		total_time = time.perf_counter() - start_time
 
-		self.score = score
+		self.score = score / char_count
 		
 		print("\n", end="")
 		print(self)
@@ -212,81 +205,23 @@ class Letter:
 		self.char = char
 		self.freq = freq
 
-# a = Letter(char="a", freq=0.082)
 
-# layout.k00.letter = a
 
-# layout.print_layout()
+
+
+corpus_file = "corpus_03.txt"
 
 layout = Layout()
 # print(layout)
-
-corpus_file = "corpus_03.txt"
 layout.analyze(corpus_file)
-layout.swap_rnd()
-print(layout)
 
-# print(layout.char_dict["a"].finger)
-
-# print("\n", end="")
-# layout.print_layout()
-
-
-
-# https://en.wikipedia.org/wiki/Letter_frequency
-
-freq_cs = [
-	0.09288,
-	0.00822,
-	0.00779,
-	0.03490,
-	0.05396,
-	0.00084,
-	0.00092,
-	0.03247,
-	0.07716,
-	0.01433,
-	0.02894,
-	0.03802,
-	0.02446,
-	0.06475,
-	0.06719,
-	0.01906,
-	0.00091,
-	0.05179,
-	0.05900,
-	0.05733,
-	0.02409,
-	0.05344,
-	0.00016,
-	0.00027,
-	0.02038,
-	0.02320]
-
-freq_en = [
-	0.08087,
-	0.01493,
-	0.02781,
-	0.04253,
-	0.12700,
-	0.02228,
-	0.02015,
-	0.06094,
-	0.06966,
-	0.00153,
-	0.00772,
-	0.04094,
-	0.02587,
-	0.06749,
-	0.07507,
-	0.01929,
-	0.00096,
-	0.05987,
-	0.06234,
-	0.09056,
-	0.02758,
-	0.00978,
-	0.02360,
-	0.00150,
-	0.01974,
-	0.00074]
+while True:
+	tmp_layout = copy.deepcopy(layout)
+	tmp_layout.swap_rnd()
+	tmp_layout.update()
+	tmp_layout.analyze(corpus_file)
+	if tmp_layout.score < layout.score:
+		layout = tmp_layout
+	else:
+		del tmp_layout
+	print(layout)

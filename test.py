@@ -1,3 +1,6 @@
+from unicodedata import east_asian_width
+
+
 freq_cs = [
 	0.09288,
 	0.00822,
@@ -88,7 +91,12 @@ freq_mixed = [(1.0 - mix) * en + mix * cs for en, cs in zip(freq_en, freq_cs)]
 # print(sum(freq_cs))
 
 
-sorted = [abc for _, abc in sorted(zip(freq_mixed, abc))]
+sorted = {abc: freq_mixed for freq_mixed, abc in sorted(zip(freq_mixed, abc))}
 
 print(f"{mix = }")
-print(sorted)
+
+for char in sorted:
+	print(f"{char} - {sorted[char]:.4f}")
+# print(sorted)
+
+most_frequent = "eatoinsr"

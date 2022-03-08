@@ -39,6 +39,7 @@ chars = {
 	"z": None
 }
 
+most_frequent = "eatoinsr"
 
 class Layout:
 
@@ -80,6 +81,14 @@ class Layout:
 
 	def swap_rnd(self):
 		rnd = random.sample(range(0, 23), 2)
+		self.char_map[rnd[0]], self.char_map[rnd[1]] = self.char_map[rnd[1]], self.char_map[rnd[0]]
+
+	def swap_home_row(self):
+		rnd = random.sample(range(8, 15), 2)
+		self.char_map[rnd[0]], self.char_map[rnd[1]] = self.char_map[rnd[1]], self.char_map[rnd[0]]
+
+	def swap_not_home_row(self):
+		rnd = random.sample(list(range(0, 7)) + list(range(16, 23)), 2)
 		self.char_map[rnd[0]], self.char_map[rnd[1]] = self.char_map[rnd[1]], self.char_map[rnd[0]]
 	
 	def analyze(self, corpus_file):
@@ -158,15 +167,15 @@ class Layout:
 
 		self.score = score / char_count
 		
-		print("\n", end="")
-		print(self)
-		print("\n", end="")
-		print(f"corpus: {corpus_file}")
-		print(f"number of chars: {char_count}")
-		print("\n", end="")
-		print(f"score: {score / char_count:.6f}")
-		print(f"time: {total_time:.3f} s")
-		print("\n", end="")
+		# print("\n", end="")
+		# print(self)
+		# print("\n", end="")
+		# print(f"corpus: {corpus_file}")
+		# print(f"number of chars: {char_count}")
+		# print("\n", end="")
+		# print(f"score: {score / char_count:.6f}")
+		# print(f"time: {total_time:.3f} s")
+		# print("\n", end="")
 
 
 	def mirror(self):
@@ -215,13 +224,47 @@ layout = Layout()
 # print(layout)
 layout.analyze(corpus_file)
 
-while True:
-	tmp_layout = copy.deepcopy(layout)
-	tmp_layout.swap_rnd()
-	tmp_layout.update()
-	tmp_layout.analyze(corpus_file)
-	if tmp_layout.score < layout.score:
-		layout = tmp_layout
-	else:
-		del tmp_layout
-	print(layout)
+ITERATIONS = 16
+POOL_SIZE = 16
+
+layouts = [layout]
+
+for i in range(ITERATIONS):
+
+	print(i)
+	layouts_copy = copy.deepcopy(layouts)
+
+	for layout in layouts_copy:
+
+		new_layouts = []
+
+		while len(new_layouts) < 16:
+			# print("iernst")
+			tmp_layout = copy.deepcopy(layout)
+			tmp_layout.swap_home_row()
+			tmp_layout.swap_not_home_row()
+			# print(len(new_layouts))
+			if layout.char_map == tmp_layout.char_map:
+				continue
+			# print("got here")
+			tmp_layout.update()
+			tmp_layout.analyze(corpus_file)
+			new_layouts.append(tmp_layout)
+			# if tmp_layout.score < layout.score:
+			# 	layout = tmp_layout
+			# else:
+			# 	del tmp_layout
+
+		new_layouts.sort(key=lambda x: x.score, reverse=False)
+		del new_layouts[4:]
+		# print(new_layouts)
+
+		layouts.extend(new_layouts)
+
+	layouts.sort(key=lambda x: x.score, reverse=False)
+	del layouts[16:]
+	# print(layouts)
+		# for layout in layouts:
+		# 	print(layout.score)
+
+print(layouts[0])

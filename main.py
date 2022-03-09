@@ -90,10 +90,13 @@ class Layout:
 	def swap_not_home_row(self):
 		rnd = random.sample(list(range(0, 7)) + list(range(16, 23)), 2)
 		self.char_map[rnd[0]], self.char_map[rnd[1]] = self.char_map[rnd[1]], self.char_map[rnd[0]]
+
+	def swap_yes():
+		pass
 	
 	def analyze(self, corpus_file):
 
-		SBF_PENALTY = 1.0
+		SBF_PENALTY = 10.0
 		INWARD_ROLL = -0.5
 		OUTWARD_ROLL = 0.0
 
@@ -115,6 +118,8 @@ class Layout:
 			roll_streak = 0
 
 			sfb_count = 0
+			roll_count = 0
+			left_hand_count = 0
 
 			while True:
 
@@ -127,11 +132,17 @@ class Layout:
 				key = self.char_dict[char] if char in self.char_dict else None
 				
 				if not key:
+					key_prev = None
+					same_hand_streak += 0.5
+					left_hand_count += 0.5
 					continue
 
 				if not key_prev:
 					key_prev = key
 					continue
+
+				if key.hand == 'left':
+					left_hand_count += 1
 
 				if key.hand == key_prev.hand:
 					# same hand
@@ -145,10 +156,12 @@ class Layout:
 					if key.finger < key_prev.finger:
 						# inward roll
 						roll_streak += 1
+						roll_count += 1
 						score += INWARD_ROLL
 					if key.finger > key_prev.finger:
 						# outward roll
 						roll_streak += 1
+						roll_count += 1
 						score += OUTWARD_ROLL
 					
 					# else:
@@ -169,6 +182,8 @@ class Layout:
 
 		self.score = score / char_count
 		self.sfb = sfb_count / char_count
+		self.roll = roll_count / char_count
+		self.hand = left_hand_count / char_count
 
 		# print("\n", end="")
 		# print(self)
@@ -184,12 +199,6 @@ class Layout:
 	def mirror(self):
 		pass
 
-
-	def debug(self):
-		for key in self.char_map:
-			print(key.finger)
-
-
 	def __str__(self):
 		string = ""
 		for i, char in enumerate(self.char_map):
@@ -202,6 +211,12 @@ class Layout:
 			else:
 				string += " "
 		return string
+	
+	def print_stats(self):
+		print(f"Score:   {self.score:.4f}")
+		print(f"SFB:     {self.sfb:.4f}")
+		print(f"Rolls:   {self.roll:.4f}")
+		print(f"Balance: {self.hand:.4f} / {1 - self.hand:.4f}")
 
 				
 
@@ -223,16 +238,27 @@ class Letter:
 
 
 
+	
+def naka_rushton(x, p, g):
+	tmp = pow(x/p, g)
+	return tmp / (tmp + 1)
+
+def discard_bad_layouts(layouts, pivot, gamma):
+	return [layout for i, layout in enumerate(layouts) if naka_rushton(i, pivot, gamma) < random.random()]
+
+
+
 start_time = time.perf_counter()
 
 corpus_file = "corpus_03.txt"
 layout = Layout()
 layout.analyze(corpus_file)
 
-ITERATIONS = 16
-POOL_SIZE = 16
+ITERATIONS = 64
+# POOL_SIZE = 32
 
 layouts = [layout]
+last_best_layout = layout
 for i in range(ITERATIONS):
 
 	layouts_copy = copy.deepcopy(layouts)
@@ -250,17 +276,21 @@ for i in range(ITERATIONS):
 			new_layouts.append(tmp_layout)
 
 		new_layouts.sort(key=lambda x: x.score, reverse=False)
-		del new_layouts[4:]
+		new_layouts = discard_bad_layouts(new_layouts, 8, 4)
 
 		layouts.extend(new_layouts)
 
 	layouts.sort(key=lambda x: x.score, reverse=False)
-	del layouts[16:]
+	layouts = discard_bad_layouts(layouts, 32, 4)
 	
-	print("\n", end="")
-	print(f"Iteration {str(i + 1).zfill(len(str(ITERATIONS)))} / {ITERATIONS}")
-	print("Best layout so far:")
-	print(layouts[0])
+	best_layout_so_far = layouts[0]
+	if best_layout_so_far.char_map != last_best_layout.char_map:
+		print("\n", end="")
+		print(f"Iteration {str(i + 1).zfill(len(str(ITERATIONS)))} / {ITERATIONS}")
+		print("Best layout so far:")
+		print(best_layout_so_far)
+		best_layout_so_far.print_stats()
+	last_best_layout = best_layout_so_far
 
 print("\n", end="")
 total_time = time.perf_counter() - start_time

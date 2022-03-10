@@ -49,14 +49,20 @@ class Layout:
 		self.row_map = [
 			2, 2, 2, 2, 2, 2, 2, 2,
 			1, 1, 1, 1, 1, 1, 1, 1,
-			0, 0, 0, 0, 0, 0, 0, 0,
-			# -1, -1, -1, -1, -1, -1, -1, -1
+			0, 0, 0, 0, 0, 0, 0, 0
 		]
 		self.finger_map = [
 			4, 3, 2, 1, 1, 2, 3, 4,
 			4, 3, 2, 1, 1, 2, 3, 4,
 			4, 3, 2, 1, 1, 2, 3, 4
 		]
+		self.effort_map = [
+			5.0, 2.0, 1.4, 1.7,
+			3.0, 1.5, 1.0, 1.2,
+			4.0, 3.0, 1.8, 1.5
+		]
+		def symmetrize():
+			pass
 		self.hand_map = [
 			"left", "left", "left", "left", "right", "right", "right", "right",
 			"left", "left", "left", "left", "right", "right", "right", "right",
@@ -67,7 +73,9 @@ class Layout:
 			"a", "r", "s", "t", "n", "e", "i", "o",
 			"z", "v", "c", "d", "h", "g", "m", "k"
 		]
-		
+		self.time = [None] * 24
+		# TODO swaping keys themselves?
+		# TODO make sure not to delete the best layouts
 		self.score = None
 
 		self.update()
@@ -91,12 +99,15 @@ class Layout:
 		rnd = random.sample(list(range(0, 7)) + list(range(16, 23)), 2)
 		self.char_map[rnd[0]], self.char_map[rnd[1]] = self.char_map[rnd[1]], self.char_map[rnd[0]]
 
-	def swap_yes():
-		pass
+	def swap_yes(self):
+		for _ in range(random.randint(1, 2)):
+			self.swap_not_home_row()
+		if random.random() < 0.5:
+			self.swap_home_row()
 	
 	def analyze(self, corpus_file):
 
-		SBF_PENALTY = 10.0
+		SFB_PENALTY = 100.0
 		INWARD_ROLL = -0.5
 		OUTWARD_ROLL = 0.0
 
@@ -111,12 +122,12 @@ class Layout:
 		with open(corpus_file) as file:
 
 			score = 0.0
-			char_count = 0
 			key_prev = None
 			same_hand_streak = 0
 			same_finger_streak = 0
 			roll_streak = 0
 
+			char_count = 0
 			sfb_count = 0
 			roll_count = 0
 			left_hand_count = 0
@@ -151,7 +162,8 @@ class Layout:
 					if key.finger == key_prev.finger:
 						# SFB
 						sfb_count += 1
-						score += SBF_PENALTY
+						# travel = abs(key.row - key_prev.row)
+						score += SFB_PENALTY
 					
 					if key.finger < key_prev.finger:
 						# inward roll
@@ -163,17 +175,14 @@ class Layout:
 						roll_streak += 1
 						roll_count += 1
 						score += OUTWARD_ROLL
-					
-					# else:
-					# 	roll_streak += 1
-					# 	if key.finger < key_prev.finger:
-					# 		# inward roll
-					# 		score += INWARD_ROLL
+
+					travel = abs(key.row - key_prev.row)
+					travel = 1 + travel * 1.0
 
 				else:
 					# alternating
 					#  streak ended - penalty
-					score += 0.1 * same_hand_streak ** 2
+					score += 0.5 * same_hand_streak ** 2
 					same_hand_streak = 1
 
 				key_prev = key
@@ -254,7 +263,7 @@ corpus_file = "corpus_03.txt"
 layout = Layout()
 layout.analyze(corpus_file)
 
-ITERATIONS = 64
+ITERATIONS = 256
 # POOL_SIZE = 32
 
 layouts = [layout]
@@ -267,8 +276,7 @@ for i in range(ITERATIONS):
 		new_layouts = []
 		while len(new_layouts) < 16:
 			tmp_layout = copy.deepcopy(layout)
-			tmp_layout.swap_home_row()
-			tmp_layout.swap_not_home_row()
+			tmp_layout.swap_yes()
 			if layout.char_map == tmp_layout.char_map:
 				continue
 			tmp_layout.update()
@@ -276,12 +284,13 @@ for i in range(ITERATIONS):
 			new_layouts.append(tmp_layout)
 
 		new_layouts.sort(key=lambda x: x.score, reverse=False)
-		new_layouts = discard_bad_layouts(new_layouts, 8, 4)
+		new_layouts = discard_bad_layouts(new_layouts, 16, 4)
 
 		layouts.extend(new_layouts)
 
 	layouts.sort(key=lambda x: x.score, reverse=False)
-	layouts = discard_bad_layouts(layouts, 32, 4)
+	layouts = discard_bad_layouts(layouts, 64, 4)
+	print(len(layouts))
 	
 	best_layout_so_far = layouts[0]
 	if best_layout_so_far.char_map != last_best_layout.char_map:

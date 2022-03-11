@@ -1,10 +1,6 @@
 import time
 import random
 import copy
-
-#  02 12 22 32 42 52 62 72 82 92
-#  01 11 21 31 41 51 61 71 81 91
-#  00 10 20 30 40 50 60 70 80 90
     
 #   02 12 22 32   42 52 62 72
 #   01 11 21 31   41 51 61 71
@@ -46,33 +42,31 @@ class Layout:
 
 	def __init__(self):
 
-		self.row_map = [
-			2, 2, 2, 2, 2, 2, 2, 2,
-			1, 1, 1, 1, 1, 1, 1, 1,
-			0, 0, 0, 0, 0, 0, 0, 0
-		]
+		def symmetrize(list):
+			new_list = [
+				list[0], list[1], list[2], list[3], list[3], list[2], list[1], list[0],
+				list[4], list[5], list[6], list[7], list[7], list[6], list[5], list[4],
+				list[8], list[9], list[10], list[11], list[11], list[10], list[9], list[8]]
+			return new_list
+		
+		self.row_map = [1] * 8 + [0] * 8 + [-1] * 8
 		self.finger_map = [
 			4, 3, 2, 1, 1, 2, 3, 4,
 			4, 3, 2, 1, 1, 2, 3, 4,
-			4, 3, 2, 1, 1, 2, 3, 4
-		]
-		self.effort_map = [
+			4, 3, 2, 1, 1, 2, 3, 4]
+		effort_map = [
 			5.0, 2.0, 1.4, 1.7,
 			3.0, 1.5, 1.0, 1.2,
-			4.0, 3.0, 1.8, 1.5
-		]
-		def symmetrize():
-			pass
+			4.0, 3.0, 1.8, 1.5]
+		self.effort_map = symmetrize(effort_map)
 		self.hand_map = [
 			"left", "left", "left", "left", "right", "right", "right", "right",
 			"left", "left", "left", "left", "right", "right", "right", "right",
-			"left", "left", "left", "left", "right", "right", "right", "right"
-		]
+			"left", "left", "left", "left", "right", "right", "right", "right"]
 		self.char_map = [
 			"b", "w", "f", "p", "l", "u", "y", "j",
 			"a", "r", "s", "t", "n", "e", "i", "o",
-			"z", "v", "c", "d", "h", "g", "m", "k"
-		]
+			"z", "v", "c", "d", "h", "g", "m", "k"]
 		self.time = [None] * 24
 		# TODO swaping keys themselves?
 		# TODO make sure not to delete the best layouts
@@ -85,7 +79,7 @@ class Layout:
 		self.char_dict = {}
 		for i, char in enumerate(self.char_map):
 			if char is not None:
-				self.char_dict[char.lower()] = Key(self.hand_map[i], self.finger_map[i], self.row_map[i], self.char_map[i])
+				self.char_dict[char.lower()] = Key(self.hand_map[i], self.finger_map[i], self.row_map[i], self.effort_map[i], self.char_map[i])
 
 	def swap_rnd(self):
 		rnd = random.sample(range(0, 23), 2)
@@ -154,6 +148,8 @@ class Layout:
 
 				if key.hand == 'left':
 					left_hand_count += 1
+
+				base_effort = key.effort  # TODO 
 
 				if key.hand == key_prev.hand:
 					# same hand
@@ -230,10 +226,11 @@ class Layout:
 				
 
 class Key:
-	def __init__(self, hand, finger, row, char):
+	def __init__(self, hand, finger, row, effort, char):
 		self.hand = hand
 		self.finger = finger
 		self.row = row
+		self.effort = effort
 		self.char = char
 
 class Letter:

@@ -101,9 +101,9 @@ class Layout:
 	
 	def analyze(self, corpus_file):
 
-		SFB_PENALTY = 100.0
-		INWARD_ROLL = -0.5
-		OUTWARD_ROLL = 0.0
+		SFB_PENALTY = 4.0
+		INWARD_ROLL = 0.7
+		OUTWARD_ROLL = 1.2
 
 		#  0 - thumb
 		#  1 - index
@@ -149,7 +149,7 @@ class Layout:
 				if key.hand == 'left':
 					left_hand_count += 1
 
-				base_effort = key.effort  # TODO 
+				key_effort = key.effort
 
 				if key.hand == key_prev.hand:
 					# same hand
@@ -159,29 +159,32 @@ class Layout:
 						# SFB
 						sfb_count += 1
 						# travel = abs(key.row - key_prev.row)
-						score += SFB_PENALTY
+						key_effort *= SFB_PENALTY
 					
 					if key.finger < key_prev.finger:
 						# inward roll
 						roll_streak += 1
 						roll_count += 1
-						score += INWARD_ROLL
+						key_effort *= INWARD_ROLL
 					if key.finger > key_prev.finger:
 						# outward roll
 						roll_streak += 1
 						roll_count += 1
-						score += OUTWARD_ROLL
+						key_effort *= OUTWARD_ROLL
 
 					travel = abs(key.row - key_prev.row)
-					travel = 1 + travel * 1.0
+					travel = 1 + travel * 0.5
+					key_effort *= travel
 
 				else:
 					# alternating
 					#  streak ended - penalty
 					score += 0.5 * same_hand_streak ** 2
 					same_hand_streak = 1
+					mult = 1.0
 
 				key_prev = key
+				score += key_effort
 		
 		total_time = time.perf_counter() - start_time
 
@@ -222,6 +225,7 @@ class Layout:
 		print(f"SFB:     {self.sfb:.4f}")
 		print(f"Rolls:   {self.roll:.4f}")
 		print(f"Balance: {self.hand:.4f} / {1 - self.hand:.4f}")
+		# TODO finger usage
 
 				
 
@@ -260,7 +264,7 @@ corpus_file = "corpus_03.txt"
 layout = Layout()
 layout.analyze(corpus_file)
 
-ITERATIONS = 256
+ITERATIONS = 64
 # POOL_SIZE = 32
 
 layouts = [layout]

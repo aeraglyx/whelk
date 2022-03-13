@@ -71,10 +71,12 @@ class Layout:
 		self.char_map[rnd[0]], self.char_map[rnd[1]] = self.char_map[rnd[1]], self.char_map[rnd[0]]
 
 	def swap_yes(self):
-		for _ in range(random.randint(1, 2)):
-			self.swap_not_home_row()
-		if random.random() < 0.5:
-			self.swap_home_row()
+		# for _ in range(random.randint(1, 2)):
+		# 	self.swap_not_home_row()
+		# if random.random() < 0.5:
+		# 	self.swap_home_row()
+		for _ in range(random.randint(1, 3)):
+			self.swap_rnd()
 	
 	def analyze(self, corpus_file):
 

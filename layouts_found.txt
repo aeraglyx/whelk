@@ -17,3 +17,15 @@ b f d l  y z w k
 b f l d  g u p j
 s n t r  a e i o
 v m c h  y z w k
+
+v w c m  z f y j
+s n r t  e a i o
+b p l d  g h u k
+
+b f l d  g u z j
+n s t r  a e i o
+p c m h  v y w k
+
+b p l d  g f u j
+s t n r  a e i o
+v m h c  z y w k

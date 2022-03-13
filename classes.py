@@ -56,7 +56,7 @@ class Layout:
 		self.char_dict = {}
 		for i, char in enumerate(self.char_map):
 			if char is not None:
-				self.char_dict[char.lower()] = Key(self.hand_map[i], self.finger_map[i], self.row_map[i], self.effort_map[i], self.char_map[i])
+				self.char_dict[char.lower()] = Key(self.hand_map[i], self.finger_map[i], self.row_map[i], self.effort_map[i])
 
 	def swap_rnd(self):
 		rnd = random.sample(range(0, 23), 2)
@@ -208,12 +208,11 @@ class Layout:
 				
 
 class Key:
-	def __init__(self, hand, finger, row, effort, char):
+	def __init__(self, hand, finger, row, effort):
 		self.hand = hand
 		self.finger = finger
 		self.row = row
 		self.effort = effort
-		self.char = char
 
 class Letter:
 	def __init__(self, char, freq):

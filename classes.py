@@ -179,6 +179,7 @@ class Layout:
 		self.sfb = sfb_count / char_count
 		self.roll = roll_count / char_count
 		self.hand = left_hand_count / char_count
+		print(self.score)
 		# TODO stats object
 
 

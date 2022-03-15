@@ -21,51 +21,63 @@ def discard_bad_layouts(layouts, pivot, gamma):
 
 
 
-start_time = time.perf_counter()
+# start_time = time.perf_counter()
 
-corpus_file = "corpus_03.txt"
-layout = Layout()
-layout.analyze(corpus_file)
+# corpus_file = "corpus_03.txt"
+# layout = Layout()
+# layout.analyze(corpus_file)
 
-ITERATIONS = 128
-# POOL_SIZE = 32
+# ITERATIONS = 128
+# # POOL_SIZE = 32
 
-layouts = [layout]
-last_best_layout = layout
-for i in range(ITERATIONS):
+# layouts = [layout]
+# last_best_layout = layout
+# for i in range(ITERATIONS):
 
-	layouts_copy = copy.deepcopy(layouts)
-	for layout in layouts_copy:
+# 	layouts_copy = copy.deepcopy(layouts)
+# 	for layout in layouts_copy:
 
-		new_layouts = []
-		while len(new_layouts) < 32:
-			tmp_layout = copy.deepcopy(layout)
-			tmp_layout.swap_yes()
-			if layout.char_map == tmp_layout.char_map:
-				continue
-			tmp_layout.update()
-			tmp_layout.analyze(corpus_file)
-			new_layouts.append(tmp_layout)
+# 		new_layouts = []
+# 		while len(new_layouts) < 32:
+# 			tmp_layout = copy.deepcopy(layout)
+# 			tmp_layout.swap_yes()
+# 			if layout.char_map == tmp_layout.char_map:
+# 				continue
+# 			tmp_layout.update()
+# 			tmp_layout.analyze(corpus_file)
+# 			new_layouts.append(tmp_layout)
 
-		new_layouts.sort(key=lambda x: x.score, reverse=False)
-		new_layouts = discard_bad_layouts(new_layouts, 16, 4)
+# 		new_layouts.sort(key=lambda x: x.score, reverse=False)
+# 		new_layouts = discard_bad_layouts(new_layouts, 16, 4)
 
-		layouts.extend(new_layouts)
-		# TODO possible dupli
+# 		layouts.extend(new_layouts)
+# 		# TODO possible dupli
 
-	layouts.sort(key=lambda x: x.score, reverse=False)
-	layouts = discard_bad_layouts(layouts, 64, 4)
-	print(len(layouts))
+# 	layouts.sort(key=lambda x: x.score, reverse=False)
+# 	layouts = discard_bad_layouts(layouts, 64, 4)
+# 	print(len(layouts))
 	
-	best_layout_so_far = layouts[0]
-	if best_layout_so_far.char_map != last_best_layout.char_map:
-		print("\n", end="")
-		print(f"Iteration {str(i + 1).zfill(len(str(ITERATIONS)))} / {ITERATIONS}")
-		print("Best layout so far:")
-		print(best_layout_so_far)
-		best_layout_so_far.print_stats()
-	last_best_layout = best_layout_so_far
+# 	best_layout_so_far = layouts[0]
+# 	if best_layout_so_far.char_map != last_best_layout.char_map:
+# 		print("\n", end="")
+# 		print(f"Iteration {str(i + 1).zfill(len(str(ITERATIONS)))} / {ITERATIONS}")
+# 		print("Best layout so far:")
+# 		print(best_layout_so_far)
+# 		best_layout_so_far.print_stats()
+# 	last_best_layout = best_layout_so_far
 
-print("\n", end="")
+# print("\n", end="")
+# total_time = time.perf_counter() - start_time
+# print(f"time: {total_time:.3f} s")
+
+
+
+
+
+
+start_time = time.perf_counter()
+layout = Layout()
+corpus_file = "corpus.txt"
+layout.analyze(corpus_file)
 total_time = time.perf_counter() - start_time
 print(f"time: {total_time:.3f} s")

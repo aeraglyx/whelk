@@ -141,6 +141,24 @@ end
 	
 	# layout = Layout(dict)
 	# println(a.char_map)
+
+using DelimitedFiles
+
+
+function test(freq_file)
+	a = Vector{Tuple}()
+	open(freq_file, "r") do file
+		for i in 1:16
+			x = split(readline(file), " ")
+			push!(a, (string(x[1]), parse(Int, x[2])))
+			# println(line)
+		end
+	end
+	display(a)
+	# x = readdlm(freq_file)
+	# print(x)
+	return a
+end
 	
 function main()
 
@@ -165,8 +183,11 @@ function main()
 
 	# corpus_file = "corpus.txt"
 	texts = readdir("texts", join=true)
+	word_freq = "en_50k.txt"
 	@time analyze(char_key_dict, texts)
 
 end
 
-main()
+# main()
+
+test("en_50k.txt")

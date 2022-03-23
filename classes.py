@@ -78,7 +78,7 @@ class Layout:
 		for _ in range(random.randint(1, 3)):
 			self.swap_rnd()
 	
-	def analyze(self, corpus_file):
+	def analyze(self, data):
 
 		SFB_PENALTY = 4.0
 		INWARD_ROLL = 0.7
@@ -90,96 +90,97 @@ class Layout:
 		#  3 - ring
 		#  4 - little
 		
-		with open(corpus_file) as file:
+		# with open(corpus_file) as file:
+		# 	data = file.read()
 
-			score = 0.0
-			key_prev = None
-			same_hand_streak = 0
-			same_finger_streak = 0
-			roll_streak = 0
+		score = 0.0
+		key_prev = None
+		same_hand_streak = 0
+		same_finger_streak = 0
+		roll_streak = 0
 
-			char_count = 0
-			sfb_count = 0
-			roll_count = 0
-			left_hand_count = 0
+		char_count = 0
+		sfb_count = 0
+		roll_count = 0
+		left_hand_count = 0
 
-			while True:
+		for char in data:
 
-				char = file.read(1).lower()
-				if not char:
-					break
-				
-				char_count += 1
-				
-				key = self.char_dict[char] if char in self.char_dict else None
-				
-				if not key:
-					key_prev = None
-					same_hand_streak += 0.5
-					left_hand_count += 0.5
-					continue
+			char = char.lower()
+			# if not char:
+			# 	break
+			
+			char_count += 1
+			
+			key = self.char_dict[char] if char in self.char_dict else None
+			
+			if not key:
+				key_prev = None
+				same_hand_streak += 0.5
+				left_hand_count += 0.5
+				continue
 
-				if not key_prev:
-					key_prev = key
-					continue
-
-				if key.hand == 0:
-					left_hand_count += 1
-
-				# key_effort = key.effort
-				# finger_efforts = [2.3, 1.5, 1.0, 1.2]
-				
-				match key.finger:
-					case 1:
-						key_effort = 1.2
-					case 2:
-						key_effort = 1.0
-					case 3:
-						key_effort = 1.5
-					case 4:
-						key_effort = 2.3
-				
-				if key.row != 0:
-					key_effort *= 1.5
-
-
-				if key.hand == key_prev.hand:
-					# same hand
-					key_effort *= 1 + same_hand_streak * 0.25
-					same_hand_streak += 1
-					
-					if key.finger == key_prev.finger:
-						# SFB
-						sfb_count += 1
-						key_effort *= SFB_PENALTY
-					
-					if key.finger < key_prev.finger:
-						# inward roll
-						roll_streak += 1
-						roll_count += 1
-						key_effort *= INWARD_ROLL
-					if key.finger > key_prev.finger:
-						# outward roll
-						roll_streak += 1
-						roll_count += 1
-						key_effort *= OUTWARD_ROLL
-
-					travel = abs(key.row - key_prev.row)
-					travel = 1 + travel * 0.5
-					key_effort *= travel
-
-				else:
-					# alternating
-					same_hand_streak = 1
-
+			if not key_prev:
 				key_prev = key
-				score += key_effort
+				continue
+
+			if key.hand == 0:
+				left_hand_count += 1
+
+			# key_effort = key.effort
+			# finger_efforts = [2.3, 1.5, 1.0, 1.2]
+			
+			match key.finger:
+				case 1:
+					key_effort = 1.2
+				case 2:
+					key_effort = 1.0
+				case 3:
+					key_effort = 1.5
+				case 4:
+					key_effort = 2.3
+			
+			if key.row != 0:
+				key_effort *= 1.5
+
+
+			if key.hand == key_prev.hand:
+				# same hand
+				key_effort *= 1 + same_hand_streak * 0.25
+				same_hand_streak += 1
+				
+				if key.finger == key_prev.finger:
+					# SFB
+					sfb_count += 1
+					key_effort *= SFB_PENALTY
+				
+				if key.finger < key_prev.finger:
+					# inward roll
+					roll_streak += 1
+					roll_count += 1
+					key_effort *= INWARD_ROLL
+				if key.finger > key_prev.finger:
+					# outward roll
+					roll_streak += 1
+					roll_count += 1
+					key_effort *= OUTWARD_ROLL
+
+				travel = abs(key.row - key_prev.row)
+				travel = 1 + travel * 0.5
+				key_effort *= travel
+
+			else:
+				# alternating
+				same_hand_streak = 1
+
+			key_prev = key
+			score += key_effort
 
 		self.score = score / char_count
 		self.sfb = sfb_count / char_count
 		self.roll = roll_count / char_count
 		self.hand = left_hand_count / char_count
-		print(self.score)
+		# print(self.score)
 		# TODO stats object
 
 

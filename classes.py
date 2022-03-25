@@ -104,84 +104,87 @@ class Layout:
 		roll_count = 0
 		left_hand_count = 0
 
-		for char in data:
+		for entry in data:
+			
+			word, freq = entry
+			for char in word:
 
-			char = char.lower()
-			# if not char:
-			# 	break
-			
-			char_count += 1
-			
-			key = self.char_dict[char] if char in self.char_dict else None
-			
-			if not key:
-				key_prev = None
-				same_hand_streak += 0.5
-				left_hand_count += 0.5
-				continue
+				char = char.lower()
+				# if not char:
+				# 	break
+				
+				char_count += 1
+				
+				key = self.char_dict[char] if char in self.char_dict else None
+				
+				if not key:
+					key_prev = None
+					same_hand_streak += 0.5
+					left_hand_count += 0.5
+					continue
 
-			if not key_prev:
+				if not key_prev:
+					key_prev = key
+					continue
+
+				if key.hand == 0:
+					left_hand_count += 1
+
+				# key_effort = key.effort
+				# finger_efforts = [2.3, 1.5, 1.0, 1.2]
+				
+				match key.finger:
+					case 1:
+						key_effort = 1.2
+					case 2:
+						key_effort = 1.0
+					case 3:
+						key_effort = 1.5
+					case 4:
+						key_effort = 2.3
+				
+				if key.row != 0:
+					key_effort *= 1.5
+
+
+				if key.hand == key_prev.hand:
+					# same hand
+					key_effort *= 1 + same_hand_streak * 0.25
+					same_hand_streak += 1
+					
+					if key.finger == key_prev.finger:
+						# SFB
+						sfb_count += 1
+						key_effort *= SFB_PENALTY
+					
+					if key.finger < key_prev.finger:
+						# inward roll
+						roll_streak += 1
+						roll_count += 1
+						key_effort *= INWARD_ROLL
+					if key.finger > key_prev.finger:
+						# outward roll
+						roll_streak += 1
+						roll_count += 1
+						key_effort *= OUTWARD_ROLL
+
+					travel = abs(key.row - key_prev.row)
+					travel = 1 + travel * 0.5
+					key_effort *= travel
+
+				else:
+					# alternating
+					same_hand_streak = 1
+
 				key_prev = key
-				continue
+				score += key_effort
 
-			if key.hand == 0:
-				left_hand_count += 1
-
-			# key_effort = key.effort
-			# finger_efforts = [2.3, 1.5, 1.0, 1.2]
-			
-			match key.finger:
-				case 1:
-					key_effort = 1.2
-				case 2:
-					key_effort = 1.0
-				case 3:
-					key_effort = 1.5
-				case 4:
-					key_effort = 2.3
-			
-			if key.row != 0:
-				key_effort *= 1.5
-
-
-			if key.hand == key_prev.hand:
-				# same hand
-				key_effort *= 1 + same_hand_streak * 0.25
-				same_hand_streak += 1
-				
-				if key.finger == key_prev.finger:
-					# SFB
-					sfb_count += 1
-					key_effort *= SFB_PENALTY
-				
-				if key.finger < key_prev.finger:
-					# inward roll
-					roll_streak += 1
-					roll_count += 1
-					key_effort *= INWARD_ROLL
-				if key.finger > key_prev.finger:
-					# outward roll
-					roll_streak += 1
-					roll_count += 1
-					key_effort *= OUTWARD_ROLL
-
-				travel = abs(key.row - key_prev.row)
-				travel = 1 + travel * 0.5
-				key_effort *= travel
-
-			else:
-				# alternating
-				same_hand_streak = 1
-
-			key_prev = key
-			score += key_effort
-
-		self.score = score / char_count
-		self.sfb = sfb_count / char_count
-		self.roll = roll_count / char_count
-		self.hand = left_hand_count / char_count
-		# print(self.score)
-		# TODO stats object
+			self.score = score / char_count
+			self.sfb = sfb_count / char_count
+			self.roll = roll_count / char_count
+			self.hand = left_hand_count / char_count
+			# print(self.score)
+			# TODO stats object
 
 
 	def mirror(self):

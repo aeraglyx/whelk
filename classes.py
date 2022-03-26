@@ -14,7 +14,7 @@ import time
 
 class Layout:
 
-	def __init__(self):
+	def __init__(self, layout_string):
 
 		def symmetrize(list):
 			new_list = [
@@ -39,11 +39,12 @@ class Layout:
 		# 	0, "left", "left", "left", "right", "right", "right", "right",
 		# 	0, "left", "left", "left", "right", "right", "right", "right",
 		# 	0, "left", "left", "left", "right", "right", "right", "right"]
-		self.hand_map = ([0] * 4 + [1] * 4) * 3
-		self.char_map = [
-			"b", "w", "f", "p", "l", "u", "y", "j",
-			"a", "r", "s", "t", "n", "e", "i", "o",
-			"z", "v", "c", "d", "h", "g", "m", "k"]
+		self.hand_map = ([False] * 4 + [True] * 4) * 3
+		# self.char_map = [
+		# 	"b", "w", "f", "p", "l", "u", "y", "j",
+		# 	"a", "r", "s", "t", "n", "e", "i", "o",
+		# 	"z", "v", "c", "d", "h", "g", "m", "k"]
+		self.char_map = layout_string.split()
 		self.time = [None] * 24
 		# TODO swaping keys themselves?
 		# TODO make sure not to delete the best layouts
@@ -71,12 +72,12 @@ class Layout:
 		self.char_map[rnd[0]], self.char_map[rnd[1]] = self.char_map[rnd[1]], self.char_map[rnd[0]]
 
 	def swap_yes(self):
-		# for _ in range(random.randint(1, 2)):
-		# 	self.swap_not_home_row()
-		# if random.random() < 0.5:
-		# 	self.swap_home_row()
-		for _ in range(random.randint(1, 3)):
-			self.swap_rnd()
+		for _ in range(random.randint(1, 4)):
+			self.swap_not_home_row()
+		if random.random() < 0.75:
+			self.swap_home_row()
+		# for _ in range(random.randint(1, 3)):
+		# 	self.swap_rnd()
 	
 	def analyze(self, data):
 
@@ -94,58 +95,58 @@ class Layout:
 		# 	data = file.read()
 
 		score = 0.0
-		key_prev = None
-		same_hand_streak = 0
-		same_finger_streak = 0
-		roll_streak = 0
-
-		char_count = 0
+		
 		sfb_count = 0
-		roll_count = 0
+		roll_in_count = 0
+		roll_out_count = 0
 		left_hand_count = 0
 
 		for entry in data:
+			# print(entry)
 			
 			word, freq = entry
+
+			word_score = 0.0
+			key_prev = None
+			same_hand_streak = 0
+			same_finger_streak = 0
+			roll_streak = 0
+			key_effort = 0.0
+
 			for char in word:
 
-				char = char.lower()
-				# if not char:
-				# 	break
-				
-				char_count += 1
-				
+				# TODO make sure it's already lowercase
+								
 				key = self.char_dict[char] if char in self.char_dict else None
 				
-				if not key:
+				if not key:  # TODO make sure there are already no illegal chars
 					key_prev = None
 					same_hand_streak += 0.5
 					left_hand_count += 0.5
 					continue
 
-				if not key_prev:
-					key_prev = key
-					continue
-
-				if key.hand == 0:
-					left_hand_count += 1
 
 				# key_effort = key.effort
 				# finger_efforts = [2.3, 1.5, 1.0, 1.2]
 				
-				match key.finger:
-					case 1:
-						key_effort = 1.2
-					case 2:
-						key_effort = 1.0
-					case 3:
-						key_effort = 1.5
-					case 4:
-						key_effort = 2.3
+				if key.finger == 1:
+					key_effort = 0.8
+				elif key.finger == 2:
+					key_effort = 1.0
+				elif key.finger == 3:
+					key_effort = 1.5
+				elif key.finger == 4:
+					key_effort = 2.3
 				
 				if key.row != 0:
 					key_effort *= 1.5
 
+				if key.hand == 0:
+					left_hand_count += 1
+
+				if not key_prev:
+					key_prev = key
+					continue
 
 				if key.hand == key_prev.hand:
 					# same hand
@@ -159,13 +160,13 @@ class Layout:
 					
 					if key.finger < key_prev.finger:
 						# inward roll
-						roll_streak += 1
-						roll_count += 1
+						# roll_streak += 1
+						roll_in_count += 1
 						key_effort *= INWARD_ROLL
 					if key.finger > key_prev.finger:
 						# outward roll
-						roll_streak += 1
-						roll_count += 1
+						# roll_streak += 1
+						roll_out_count += 1
 						key_effort *= OUTWARD_ROLL
 
 					travel = abs(key.row - key_prev.row)
@@ -177,14 +178,16 @@ class Layout:
 					same_hand_streak = 1
 
 				key_prev = key
-				score += key_effort
+				word_score += key_effort
+			
+			score += word_score * freq / len(word)
 
-			self.score = score / char_count
-			self.sfb = sfb_count / char_count
-			self.roll = roll_count / char_count
-			self.hand = left_hand_count / char_count
-			# print(self.score)
-			# TODO stats object
+		self.score = score
+		# self.sfb = sfb_count / char_count
+		# self.roll = roll_count / char_count
+		# self.hand = left_hand_count / char_count
+		# print(self.score)
+		# TODO stats object
 
 
 	def mirror(self):
@@ -205,9 +208,9 @@ class Layout:
 	
 	def print_stats(self):
 		print(f"Score:   {self.score:.4f}")
-		print(f"SFB:     {self.sfb:.4f}")
-		print(f"Rolls:   {self.roll:.4f}")
-		print(f"Balance: {self.hand:.4f} / {1 - self.hand:.4f}")
+		# print(f"SFB:     {self.sfb:.4f}")
+		# print(f"Rolls:   {self.roll:.4f}")
+		# print(f"Balance: {self.hand:.4f} / {1 - self.hand:.4f}")
 		# TODO finger usage
 
 				

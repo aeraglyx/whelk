@@ -5,17 +5,32 @@ mutable struct Key
 end
 
 mutable struct Layout
-	# char_map::Array{Char, 2}
-	char_map::Dict{Char, Tuple{Int64, Int64}}
-	# finger_efforts::Array{Float64, 1}
+	char_key_dict::Dict{Char, Key}
+	score::Float64
 end
 
 
 
-# const SFB_PENALTY  = 4.0::Float64
-# const INWARD_ROLL  = 0.7::Float64
-# const OUTWARD_ROLL = 1.2::Float64
 
+
+function print_layout(layout::Layout)
+	println("something")
+end
+
+function prep_freq_data(freq_file::String, n::Int)
+	data = Vector{Tuple{String, Int64}}(undef, n)
+	freq_total::Int = 0
+	open(freq_file, "r") do file
+		for i in 1:n
+			word, freq = split(readline(file), " ")
+			freq = parse(Int, freq)
+			freq_total += freq
+			data[i] = (string(word), freq)
+		end
+	end
+	data = [(word, freq / freq_total) for (word, freq) in data]
+	return data
+end
 
 function analyze_word(word, dict)::Float64
 
@@ -86,19 +101,26 @@ function analyze(dict, data)
 		word_score = analyze_word(word, dict)
 		score += word_score * freq
 	end
-	println(score)
+	# println(score)
+	return score
 end
 
-function prepare_corpus()
-
+function analyze_multilang(dict, lang_prefs, data_length::Int)
+	score::Float64 = 0.0
+	for (lang, weight) in lang_prefs
+		data_filename = lang * "_50k.txt"
+		print(data_filename)
+		freq_data = prep_freq_data(data_filename, data_length)
+		score += analyze(dict, freq_data) * weight
+	end
+	return score
 end
 
-function print_layout(layout::Layout)
-	println("something")
-end
 
-function update_layout(layout::Layout)
-	println("something")
+function optimize_layout(layout, lang_prefs, iter::Int, data_length::Int = 4096)
+	# analyze(layout.char_key_dict, data)
+	analyze_multilang(layout.char_key_dict, lang_prefs, data_length)
+	print("yes")
 end
 
 # chars = [['a', 'v'] ['c', 'f']]
@@ -117,35 +139,12 @@ end
 	# x = ['b', 'p', 'l', 'd', 'g', 'f', 'u', 'j', 's', 't', 'n', 'r', 'a', 'e', 'i', 'o', 'v', 'm', 'h', 'c', 'z', 'y', 'w', 'k']
 	# dump(x)
 	
-	
-	
-	
 	# char_key_dict['a'], char_key_dict['b'] = char_key_dict['b'], char_key_dict['a']
 	
 	# print(dict)
 	
 	# layout = Layout(dict)
 	# println(a.char_map)
-
-# using DelimitedFiles
-
-
-function prep_freq_data(freq_file::String, n::Int)
-	data = Vector{Tuple{String, Int64}}(undef, n)
-	freq_total::Int = 0
-	open(freq_file, "r") do file
-		for i in 1:n
-			word, freq = split(readline(file), " ")
-			freq = parse(Int, freq)
-			freq_total += freq
-			data[i] = (string(word), freq)
-			# println(line)
-		end
-	end
-	data = [(word, freq / freq_total) for (word, freq) in data]
-	# display(data)
-	return data
-end
 	
 function main()
 
@@ -156,7 +155,7 @@ function main()
 	]
 	
 	char_key_dict = Dict{Char, Key}()
-
+	
 	for (i, col) in enumerate(eachcol(chars))
 		hand = i <= 4 ? false : true
 		finger = i <= 4 ? 5 - i : i - 4
@@ -165,15 +164,12 @@ function main()
 			char_key_dict[char] = Key(hand, finger, row)
 		end
 	end
-
-	# display(char_key_dict)
-
-	# corpus_file = "corpus.txt"
-	# texts = readdir("texts", join=true)
-	# word_freq = "en_50k.txt"
-	data = prep_freq_data("en_50k.txt", 4096)
-	# print(data)
-	@time analyze(char_key_dict, data)
+	
+	layout = Layout(char_key_dict, Inf)
+	
+	# lang_prefs = Dict("en" => 0.7, "cs" => 0.3)
+	lang_prefs = Dict("en" => 1.0)
+	@time optimize_layout(layout, lang_prefs, 1)
 
 end
 

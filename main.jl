@@ -1,4 +1,4 @@
-mutable struct Key
+struct Key
 	hand  ::Bool
 	finger::Int
 	row   ::Int
@@ -10,7 +10,16 @@ mutable struct Layout
 end
 
 
+function naka_rushton(x::Float64, p::Float64, g::Float64)::Float64
+	tmp = (x / p) ^ g
+	return tmp / (tmp + 1.0)
+end
 
+function discard_bad_layouts(layouts, pivot::Float64, gamma::Float64)
+	return [layout for i, layout in enumerate(layouts) if naka_rushton(type(Float64, i), pivot, gamma) < random.random()]
+end  # TODO 
+
+# function naka_rushton(x, p, g) = pow(x / p, g) / (pow(x / p, g) + 1)
 
 
 function print_layout(layout::Layout)
@@ -117,10 +126,45 @@ function analyze_multilang(dict, lang_prefs, data_length::Int)
 end
 
 
-function optimize_layout(layout, lang_prefs, iter::Int, data_length::Int = 4096)
+function optimize_layout(layout, lang_prefs, iter::Int = 64, data_length::Int = 4096)
 	# analyze(layout.char_key_dict, data)
 	analyze_multilang(layout.char_key_dict, lang_prefs, data_length)
-	print("yes")
+	layouts = [layout]
+	last_best_layout = layout
+	for i in 1:iter
+		layouts_copy = deepcopy(layouts)
+		for layout in layouts_copy:
+			new_layouts = []
+			while length(new_layouts) < 32:
+				tmp_layout = deepcopy(layout)
+				tmp_layout.swap_yes()
+				if layout.char_key_dict == tmp_layout.char_key_dict:
+					continue
+				# tmp_layout.update()
+				analyze_multilang(tmp_layout.char_key_dict, lang_prefs, data_length)
+				new_layouts.append(tmp_layout)
+
+			new_layouts.sort(key=lambda x: x.score, reverse=False)
+			new_layouts = discard_bad_layouts(new_layouts, 16, 4)
+
+			layouts.extend(new_layouts)
+			# TODO possible dupli
+		del layouts_copy
+
+		layouts.sort(key=lambda x: x.score, reverse=False)
+		layouts = discard_bad_layouts(layouts, 64, 4)
+		print(length(layouts))
+		
+		best_layout_so_far = layouts[0]
+		if best_layout_so_far.char_map != last_best_layout.char_map:
+			# print("\n", end="")
+			# print(f"Iteration {str(i + 1).zfill(len(str(iter)))} / {iter}")
+			print("Best layout so far:")
+			# print(best_layout_so_far)
+			best_layout_so_far.print_stats()
+		last_best_layout = best_layout_so_far
+	end
+	# print("yes")
 end
 
 # chars = [['a', 'v'] ['c', 'f']]

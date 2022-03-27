@@ -35,10 +35,6 @@ class Layout:
 		self.effort_map = symmetrize(effort_map)
 		finger_strength = [0.28, 0.34, 0.23, 0.15]
 		finger_efforts = [2.3, 1.5, 1.0, 1.2]
-		# self.hand_map = [
-		# 	0, "left", "left", "left", "right", "right", "right", "right",
-		# 	0, "left", "left", "left", "right", "right", "right", "right",
-		# 	0, "left", "left", "left", "right", "right", "right", "right"]
 		self.hand_map = ([False] * 4 + [True] * 4) * 3
 		# self.char_map = [
 		# 	"b", "w", "f", "p", "l", "u", "y", "j",
@@ -85,15 +81,6 @@ class Layout:
 		INWARD_ROLL = 0.7
 		OUTWARD_ROLL = 1.2
 
-		#  0 - thumb
-		#  1 - index
-		#  2 - middle
-		#  3 - ring
-		#  4 - little
-		
-		# with open(corpus_file) as file:
-		# 	data = file.read()
-
 		score = 0.0
 		
 		sfb_count = 0
@@ -124,10 +111,6 @@ class Layout:
 					same_hand_streak += 0.5
 					left_hand_count += 0.5
 					continue
-
-
-				# key_effort = key.effort
-				# finger_efforts = [2.3, 1.5, 1.0, 1.2]
 				
 				if key.finger == 1:
 					key_effort = 0.8

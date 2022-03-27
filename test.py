@@ -1,6 +1,3 @@
-from unicodedata import east_asian_width
-
-
 freq_cs = [
 	0.09288,
 	0.00822,

@@ -1,12 +1,12 @@
 # Whelk
 
-Nothing to see here. Just a little experiment. MaxQmak Whelmak
+Nothing to see here, still WIP. Just a little experiment to generate a decent 8x3 keyboard layout.
 
-Initial layouts the program found:
+Initial layout the program found (not final):
 ```
-b f l d  g u p j
-s n t r  a e i o
-v m c h  y z w k
+c w h m  g u p j
+s r n t  a e i o
+b v l d  f z y k
 ```
 
 > We don’t stand a whelk’s chance in a supernova.

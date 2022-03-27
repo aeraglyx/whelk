@@ -15,8 +15,8 @@ function naka_rushton(x::Float64, p::Float64, g::Float64)::Float64
 	return tmp / (tmp + 1.0)
 end
 
-function discard_bad_layouts(layouts, pivot::Float64, gamma::Float64)
-	return [layout for i, layout in enumerate(layouts) if naka_rushton(type(Float64, i), pivot, gamma) < random.random()]
+function discard_bad_layouts!(layouts, pivot::Float64, gamma::Float64)
+	return [layout for (i, layout) in enumerate(layouts) if naka_rushton(convert(Float64, i), pivot, gamma) < rand(Float64)]
 end  # TODO 
 
 # function naka_rushton(x, p, g) = pow(x / p, g) / (pow(x / p, g) + 1)
@@ -24,6 +24,11 @@ end  # TODO
 
 function print_layout(layout::Layout)
 	println("something")
+end
+
+function swap_keys!(layout::Layout)
+	char_key_dict = layout.char_key_dict
+	char_key_dict['a'], char_key_dict['b'] = char_key_dict['b'], char_key_dict['a']
 end
 
 function prep_freq_data(freq_file::String, n::Int)
@@ -118,7 +123,6 @@ function analyze_multilang(dict, lang_prefs, data_length::Int)
 	score::Float64 = 0.0
 	for (lang, weight) in lang_prefs
 		data_filename = lang * "_50k.txt"
-		print(data_filename)
 		freq_data = prep_freq_data(data_filename, data_length)
 		score += analyze(dict, freq_data) * weight
 	end
@@ -133,35 +137,35 @@ function optimize_layout(layout, lang_prefs, iter::Int = 64, data_length::Int = 
 	last_best_layout = layout
 	for i in 1:iter
 		layouts_copy = deepcopy(layouts)
-		for layout in layouts_copy:
+		for layout in layouts_copy
 			new_layouts = []
-			while length(new_layouts) < 32:
+			while length(new_layouts) < 32
 				tmp_layout = deepcopy(layout)
-				tmp_layout.swap_yes()
-				if layout.char_key_dict == tmp_layout.char_key_dict:
+				swap_keys!(tmp_layout)
+				if layout.char_key_dict == tmp_layout.char_key_dict
 					continue
-				# tmp_layout.update()
+				end
 				analyze_multilang(tmp_layout.char_key_dict, lang_prefs, data_length)
-				new_layouts.append(tmp_layout)
-
-			new_layouts.sort(key=lambda x: x.score, reverse=False)
-			new_layouts = discard_bad_layouts(new_layouts, 16, 4)
-
-			layouts.extend(new_layouts)
+				push!(new_layouts, tmp_layout)
+			end
+			sort!(new_layouts, by = layout -> layout.score, rev = false)
+			new_layouts = discard_bad_layouts!(new_layouts, 16.0, 4.0)
+			append!(layouts, new_layouts)
 			# TODO possible dupli
-		del layouts_copy
-
-		layouts.sort(key=lambda x: x.score, reverse=False)
-		layouts = discard_bad_layouts(layouts, 64, 4)
+		end
+		# del layouts_copy
+		sort!(layouts, by = layout -> layout.score, rev = false)
+		layouts = discard_bad_layouts!(layouts, 64.0, 4.0)
 		print(length(layouts))
 		
-		best_layout_so_far = layouts[0]
-		if best_layout_so_far.char_map != last_best_layout.char_map:
+		best_layout_so_far = layouts[1]
+		if best_layout_so_far.char_key_dict != last_best_layout.char_key_dict
 			# print("\n", end="")
 			# print(f"Iteration {str(i + 1).zfill(len(str(iter)))} / {iter}")
-			print("Best layout so far:")
+			println("Best layout so far:")
 			# print(best_layout_so_far)
-			best_layout_so_far.print_stats()
+			# best_layout_so_far.print_stats()
+		end
 		last_best_layout = best_layout_so_far
 	end
 	# print("yes")
@@ -213,7 +217,7 @@ function main()
 	
 	# lang_prefs = Dict("en" => 0.7, "cs" => 0.3)
 	lang_prefs = Dict("en" => 1.0)
-	@time optimize_layout(layout, lang_prefs, 1)
+	@time optimize_layout(layout, lang_prefs, 4)
 
 end
 

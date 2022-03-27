@@ -2,10 +2,11 @@ struct Key
 	hand  ::Bool
 	finger::Int
 	row   ::Int
+	# TODO base effort
 end
 
 mutable struct Layout
-	char_key_dict::Dict{Char, Key}
+	char_key_dict::Dict{Char, Key}  # TODO vector of pairs ?
 	score::Float64
 end
 
@@ -28,11 +29,11 @@ function print_layout(layout::Layout)
 end
 
 function swap_keys!(layout::Layout)
-	char_key_dict = layout.char_key_dict
-	char_key_dict['a'], char_key_dict['b'] = char_key_dict['b'], char_key_dict['a']
+	keys = collect(keys(layout.char_key_dict))
+	keys[1], keys[2] = keys[2], keys[1]  # TODO 
 end
 
-function get_freq_data(lang_prefs, n::Int)::Dict{String, Float64}
+function get_word_freq_data(lang_prefs::Dict{String, Float64}, n::Int)::Dict{String, Float64}
 	datax = Dict{String, Float64}()
 	for (lang, weight) in lang_prefs
 		data_filename = "freq_data/" * lang * "_50k.txt"
@@ -45,16 +46,69 @@ function get_freq_data(lang_prefs, n::Int)::Dict{String, Float64}
 				freq = parse(UInt, freq)
 				freq_total += freq
 				data[i] = (word, freq)
-				# data[word] = freq
 			end
 		end
 		mergewith!(+, datax, Dict(word => freq * weight / freq_total for (word, freq) in data))
 	end
-	# print(datax)
 	return datax
 end
 
-function analyze_word(word, dict)::Float64
+function analyze_char(char::Char, char_key_dict)
+	key::Key = char_key_dict[char]
+	finger_strengths = (1.2, 1.0, 1.5, 2.3)
+	stroke_effort::Float64 = finger_strengths[key.finger]
+	if key.row != 2
+		stroke_effort *= 1.5
+	end
+end
+
+function analyze_chars(char_data, char_key_dict)::Float64
+	score::Float64 = 0.0
+	for (char, freq) in char_data
+		char_score = analyze_char(char, char_key_dict)
+		score += char_score * freq
+	end
+	return score
+end
+
+function analyze_bigram(bigram::String, char_key_dict)
+
+	# TODO precompute key-key pairs ?
+	
+	SFB_PENALTY ::Float64 = 4.0
+	INWARD_ROLL ::Float64 = 0.7
+	OUTWARD_ROLL::Float64 = 1.2
+	
+	key_1::Key = char_key_dict[bigram[1]]
+	key_2::Key = char_key_dict[bigram[2]]
+	
+	finger_strengths = (1.2, 1.0, 1.5, 2.3)
+	trans_effort::Float64 = (finger_strengths[key_1.finger] + finger_strengths[key_2.finger]) * 0.5
+
+	if key_1.hand == key_2.hand
+		if key.finger == key_2.finger
+			trans_effort *= SFB_PENALTY
+		elseif key_1.finger < key_2.finger
+			trans_effort *= INWARD_ROLL
+		elseif key_1.finger > key_2.finger
+			trans_effort *= OUTWARD_ROLL
+		end
+		travel = 1.0 + (key_1.row - key_2.row) * 0.5
+		trans_effort *= travel
+	end
+	return trans_effort
+end
+
+function analyze_bigrams(bigram_data, char_key_dict)::Float64
+	score::Float64 = 0.0
+	for (bigram, freq) in bigram_data
+		bigram_score = analyze_bigram(bigram, char_key_dict)
+		score += bigram_score * freq
+	end
+	return score
+end
+
+function analyze_word(word::String, dict::Dict{Char, Key})::Float64
 
 	SFB_PENALTY ::Float64 = 4.0
 	INWARD_ROLL ::Float64 = 0.7
@@ -65,20 +119,16 @@ function analyze_word(word, dict)::Float64
 	same_hand_streak::Int64 = 0
 
 	for char in word
-		# char = lowercase(read(file, Char))
-		# char_count += 1
-		if !haskey(dict, char)  # TODO make sure there are already no illegal chars
+
+		if !haskey(dict, char)
 			key_prev = false
-			# same_hand_streak += 0.5
-			# left_hand_count += 0.5
 			continue
 		end
 		
 		key = dict[char]
-					
-		stroke_effort::Float64 = 0.0
-
+		
 		finger_strengths = (1.2, 1.0, 1.5, 2.3)
+		stroke_effort::Float64 = 0.0
 		stroke_effort = finger_strengths[key.finger]
 		
 		if key.row != 2
@@ -112,6 +162,21 @@ function analyze_word(word, dict)::Float64
 	return score / length(word)
 end
 
+function analyze_v2(layout, data)
+
+	char_key_dict = layout.char_key_dict
+	# score::Float64 = 0.0
+
+	char_data = get_char_data()
+	bigram_data = get_bigram_data()
+
+	score_chars = analyze_chars(char_data, char_key_dict)
+	score_bigrams = analyze_bigrams(bigram_data, char_key_dict)
+
+	score::Float64 = score_chars * 0.5 + score_bigrams * 0.5
+	layout.score = score
+end
+
 function analyze(layout, data)
 	dict = layout.char_key_dict
 	score::Float64 = 0.0
@@ -127,8 +192,8 @@ function analyze(layout, data)
 	layout.score = score
 end
 
-function optimize_layout(layout, lang_prefs, iter::Int = 64, data_length::Int = 4096)
-	freq_data = get_freq_data(lang_prefs, data_length)
+function optimize_layout(layout::Layout, lang_prefs, iter::Int = 64, data_length::Int = 4096)
+	freq_data = get_word_freq_data(lang_prefs, data_length)
 	analyze(layout, freq_data)
 	layouts = [layout]
 	last_best_layout = layout
@@ -168,28 +233,8 @@ function optimize_layout(layout, lang_prefs, iter::Int = 64, data_length::Int = 
 	# print("yes")
 end
 
-# chars = [['a', 'v'] ['c', 'f']]
-# chars = ['a' 'v'; 'c' 'f']
 
-# fingers = [
-# 	4 3 2 1 1 2 3 4
-# 	4 3 2 1 1 2 3 4
-# 	4 3 2 1 1 2 3 4
-# ]
-# char_list = [
-	# 	'b', 'p', 'l', 'd', 'g', 'f', 'u', 'j',
-	# 	's', 't', 'n', 'r', 'a', 'e', 'i', 'o',
-	# 	'v', 'm', 'h', 'c', 'z', 'y', 'w', 'k']
-	
-	# x = ['b', 'p', 'l', 'd', 'g', 'f', 'u', 'j', 's', 't', 'n', 'r', 'a', 'e', 'i', 'o', 'v', 'm', 'h', 'c', 'z', 'y', 'w', 'k']
-	# dump(x)
-	
-	# char_key_dict['a'], char_key_dict['b'] = char_key_dict['b'], char_key_dict['a']
-	
-	# print(dict)
-	
-	# layout = Layout(dict)
-	# println(a.char_map)
+
 	
 function main()
 
@@ -214,9 +259,6 @@ function main()
 	# print(layout.char_key_dict)
 	
 	lang_prefs = Dict("en" => 0.7, "cs" => 0.3)
-	# lang_prefs = Dict("en" => 1.0)
-	# stuff = @time get_freq_data(lang_prefs, 4096)
-	# println(length(stuff))
 	@time optimize_layout(layout, lang_prefs, 4, 1024)
 
 end

@@ -16,7 +16,8 @@ function naka_rushton(x::Float64, p::Float64, g::Float64)::Float64
 end
 
 function discard_bad_layouts!(layouts, pivot::Float64, gamma::Float64)
-	return [layout for (i, layout) in enumerate(layouts) if naka_rushton(convert(Float64, i), pivot, gamma) < rand(Float64)]
+	new = [layout for (i, layout) in enumerate(layouts) if naka_rushton(convert(Float64, i), pivot, gamma) < rand(Float64)]
+	return new
 end  # TODO 
 
 # function naka_rushton(x, p, g) = pow(x / p, g) / (pow(x / p, g) + 1)
@@ -44,6 +45,14 @@ function prep_freq_data(freq_file::String, n::Int)
 	end
 	data = [(word, freq / freq_total) for (word, freq) in data]
 	return data
+end
+
+function get_lang_freq_data(lang_prefs, data_length::Int)
+	# TODO 
+	for lang in keys(lang_prefs)
+		data_filename = lang * "_50k.txt"
+		freq_data = prep_freq_data(data_filename, data_length)  # TODO idea - mult by weight here?
+	end
 end
 
 function analyze_word(word, dict)::Float64
@@ -120,10 +129,11 @@ function analyze(dict, data)
 end
 
 function analyze_multilang(dict, lang_prefs, data_length::Int)
+	# TODO move all this outside optimize_layout
 	score::Float64 = 0.0
 	for (lang, weight) in lang_prefs
 		data_filename = lang * "_50k.txt"
-		freq_data = prep_freq_data(data_filename, data_length)
+		freq_data = prep_freq_data(data_filename, data_length)  # TODO 
 		score += analyze(dict, freq_data) * weight
 	end
 	return score
@@ -132,6 +142,7 @@ end
 
 function optimize_layout(layout, lang_prefs, iter::Int = 64, data_length::Int = 4096)
 	# analyze(layout.char_key_dict, data)
+	get_lang_freq_data()
 	analyze_multilang(layout.char_key_dict, lang_prefs, data_length)
 	layouts = [layout]
 	last_best_layout = layout
@@ -214,10 +225,11 @@ function main()
 	end
 	
 	layout = Layout(char_key_dict, Inf)
+	print(layout.char_key_dict)
 	
 	# lang_prefs = Dict("en" => 0.7, "cs" => 0.3)
 	lang_prefs = Dict("en" => 1.0)
-	@time optimize_layout(layout, lang_prefs, 4)
+	# @time optimize_layout(layout, lang_prefs, 4)
 
 end
 

@@ -32,27 +32,26 @@ function swap_keys!(layout::Layout)
 	char_key_dict['a'], char_key_dict['b'] = char_key_dict['b'], char_key_dict['a']
 end
 
-function prep_freq_data(freq_file::String, n::Int)
-	data = Vector{Tuple{String, Int64}}(undef, n)
-	freq_total::Int = 0
-	open(freq_file, "r") do file
-		for i in 1:n
-			word, freq = split(readline(file), " ")
-			freq = parse(Int, freq)
-			freq_total += freq
-			data[i] = (string(word), freq)
+function get_freq_data(lang_prefs, n::Int)::Dict{String, Float64}
+	datax = Dict{String, Float64}()
+	for (lang, weight) in lang_prefs
+		data_filename = "freq_data/" * lang * "_50k.txt"
+		data = Vector{Tuple{String, Int64}}(undef, n)
+		freq_total::UInt = 0
+		open(data_filename, "r") do file
+			for i in 1:n
+				word, freq = split(readline(file), " ")
+				word = Base.Unicode.normalize(string(word), stripmark=true, casefold=true)
+				freq = parse(UInt, freq)
+				freq_total += freq
+				data[i] = (word, freq)
+				# data[word] = freq
+			end
 		end
+		mergewith!(+, datax, Dict(word => freq * weight / freq_total for (word, freq) in data))
 	end
-	data = [(word, freq / freq_total) for (word, freq) in data]
-	return data
-end
-
-function get_lang_freq_data(lang_prefs, data_length::Int)
-	# TODO 
-	for lang in keys(lang_prefs)
-		data_filename = lang * "_50k.txt"
-		freq_data = prep_freq_data(data_filename, data_length)  # TODO idea - mult by weight here?
-	end
+	# print(datax)
+	return datax
 end
 
 function analyze_word(word, dict)::Float64
@@ -113,7 +112,8 @@ function analyze_word(word, dict)::Float64
 	return score / length(word)
 end
 
-function analyze(dict, data)
+function analyze(layout, data)
+	dict = layout.char_key_dict
 	score::Float64 = 0.0
 	# sfb_count = 0
 	# roll_count = 0
@@ -124,26 +124,12 @@ function analyze(dict, data)
 		word_score = analyze_word(word, dict)
 		score += word_score * freq
 	end
-	# println(score)
-	return score
+	layout.score = score
 end
-
-function analyze_multilang(dict, lang_prefs, data_length::Int)
-	# TODO move all this outside optimize_layout
-	score::Float64 = 0.0
-	for (lang, weight) in lang_prefs
-		data_filename = lang * "_50k.txt"
-		freq_data = prep_freq_data(data_filename, data_length)  # TODO 
-		score += analyze(dict, freq_data) * weight
-	end
-	return score
-end
-
 
 function optimize_layout(layout, lang_prefs, iter::Int = 64, data_length::Int = 4096)
-	# analyze(layout.char_key_dict, data)
-	get_lang_freq_data()
-	analyze_multilang(layout.char_key_dict, lang_prefs, data_length)
+	freq_data = get_freq_data(lang_prefs, data_length)
+	analyze(layout, freq_data)
 	layouts = [layout]
 	last_best_layout = layout
 	for i in 1:iter
@@ -156,7 +142,7 @@ function optimize_layout(layout, lang_prefs, iter::Int = 64, data_length::Int = 
 				if layout.char_key_dict == tmp_layout.char_key_dict
 					continue
 				end
-				analyze_multilang(tmp_layout.char_key_dict, lang_prefs, data_length)
+				analyze(tmp_layout, freq_data)
 				push!(new_layouts, tmp_layout)
 			end
 			sort!(new_layouts, by = layout -> layout.score, rev = false)
@@ -225,11 +211,13 @@ function main()
 	end
 	
 	layout = Layout(char_key_dict, Inf)
-	print(layout.char_key_dict)
+	# print(layout.char_key_dict)
 	
-	# lang_prefs = Dict("en" => 0.7, "cs" => 0.3)
-	lang_prefs = Dict("en" => 1.0)
-	# @time optimize_layout(layout, lang_prefs, 4)
+	lang_prefs = Dict("en" => 0.7, "cs" => 0.3)
+	# lang_prefs = Dict("en" => 1.0)
+	# stuff = @time get_freq_data(lang_prefs, 4096)
+	# println(length(stuff))
+	@time optimize_layout(layout, lang_prefs, 4, 1024)
 
 end
 

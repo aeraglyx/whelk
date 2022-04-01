@@ -32,9 +32,15 @@ function print_layout(layout::Layout)
 	println("something")
 end
 
+# using StatsBase
 function swap_keys!(layout::Layout)
-	keys = collect(keys(layout.char_key_dict))
-	keys[1], keys[2] = keys[2], keys[1]  # TODO 
+	dict = layout.char_key_dict
+	keysx = collect(keys(dict))
+	# rnd = StatsBase.sample(1:24, 2, replace=false) 
+	rnd1 = rand(1:24)
+	rnd2 = rand(1:24)
+	# println(rnd1)
+	dict[keysx[rnd1]], dict[keysx[rnd2]] = dict[keysx[rnd2]], dict[keysx[rnd1]]  # TODO 
 end
 
 function get_word_data(lang_prefs::Dict{String, Float64}, n::Int)::Dict{String, Float64}
@@ -202,7 +208,7 @@ function analyze_layout(layout, letter_data, bigram_data)
 	# println(score_bigrams)
 	score::Float64 = score_letters * 0.5 + score_bigrams * 0.5
 	layout.score = score
-	println(score)
+	# println(score)
 end
 
 
@@ -219,7 +225,7 @@ function optimize_layout(layout::Layout, lang_prefs, iter::Int = 64, data_length
 			new_layouts = []
 			while length(new_layouts) < 32
 				tmp_layout = deepcopy(layout)
-				# swap_keys!(tmp_layout)  # TODO 
+				swap_keys!(tmp_layout)  # TODO 
 				if layout.char_key_dict == tmp_layout.char_key_dict
 					continue
 				end
@@ -234,14 +240,14 @@ function optimize_layout(layout::Layout, lang_prefs, iter::Int = 64, data_length
 		# del layouts_copy
 		sort!(layouts, by = layout -> layout.score, rev = false)
 		layouts = discard_bad_layouts!(layouts, 64.0, 4.0)
-		print(length(layouts))
+		# print(length(layouts))
 		
 		best_layout_so_far = layouts[1]
 		if best_layout_so_far.char_key_dict != last_best_layout.char_key_dict
 			# print("\n", end="")
 			# print(f"Iteration {str(i + 1).zfill(len(str(iter)))} / {iter}")
 			println("Best layout so far:")
-			# print(best_layout_so_far)
+			# println(best_layout_so_far.char_key_dict)
 			# best_layout_so_far.print_stats()
 		end
 		last_best_layout = best_layout_so_far
@@ -275,7 +281,7 @@ function main()
 	# print(layout.char_key_dict)
 	
 	lang_prefs = Dict("en" => 0.7, "cs" => 0.3)
-	@time optimize_layout(layout, lang_prefs, 1, 1024)
+	@time optimize_layout(layout, lang_prefs, 16, 4096)
 
 end
 

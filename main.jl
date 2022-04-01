@@ -45,7 +45,7 @@ function get_word_data(lang_prefs::Dict{String, Float64}, n::Int)::Dict{String, 
 		freq_total::UInt = 0
 		open(data_filename, "r") do file
 			for i in 1:n
-				word, freq = split(readline(file), " ")
+				word, freq = split(readline(file), ' ')
 				word = normalize(string(word), stripmark=true, casefold=true)
 				word = filter(isletter, word)
 				freq = parse(UInt, freq)
@@ -81,16 +81,24 @@ function get_ngram_data(word_freq_data::Dict{String, Float64}, n::Int)
 	return bigram_data
 end
 
-function analyze_letter(char::SubString, char_key_dict)
+function analyze_letter(char::SubString, char_key_dict)::Float64
+	if only(char) == 'x' || only(char) == 'q'
+		return 0.0
+	end
 	key::Key = char_key_dict[only(char)]
 	finger_strengths = (1.2, 1.0, 1.5, 2.3)
 	stroke_effort::Float64 = finger_strengths[key.finger]
 	if key.row != 2
 		stroke_effort *= 1.5
 	end
+	return stroke_effort
 end
 
 function analyze_bigram(bigram::SubString, char_key_dict)
+
+	if only(bigram[1]) == 'x' || only(bigram[1]) == 'q' || only(bigram[2]) == 'x' || only(bigram[2]) == 'q'
+		return 0.0
+	end
 
 	# TODO precompute key-key pairs ?
 	
@@ -105,7 +113,7 @@ function analyze_bigram(bigram::SubString, char_key_dict)
 	trans_effort::Float64 = (finger_strengths[key_1.finger] + finger_strengths[key_2.finger]) * 0.5
 
 	if key_1.hand == key_2.hand
-		if key.finger == key_2.finger
+		if key_1.finger == key_2.finger
 			trans_effort *= SFB_PENALTY
 		elseif key_1.finger < key_2.finger
 			trans_effort *= INWARD_ROLL
@@ -187,10 +195,14 @@ end
 
 function analyze_layout(layout, letter_data, bigram_data)
 	char_key_dict = layout.char_key_dict
+	# println(letter_data)
 	score_letters = analyze_ngrams(letter_data, analyze_letter, char_key_dict)
+	# println(score_letters)
 	score_bigrams = analyze_ngrams(bigram_data, analyze_bigram, char_key_dict)
+	# println(score_bigrams)
 	score::Float64 = score_letters * 0.5 + score_bigrams * 0.5
 	layout.score = score
+	println(score)
 end
 
 
@@ -207,7 +219,7 @@ function optimize_layout(layout::Layout, lang_prefs, iter::Int = 64, data_length
 			new_layouts = []
 			while length(new_layouts) < 32
 				tmp_layout = deepcopy(layout)
-				# swap_keys!(tmp_layout)
+				# swap_keys!(tmp_layout)  # TODO 
 				if layout.char_key_dict == tmp_layout.char_key_dict
 					continue
 				end
@@ -263,17 +275,8 @@ function main()
 	# print(layout.char_key_dict)
 	
 	lang_prefs = Dict("en" => 0.7, "cs" => 0.3)
-	@time optimize_layout(layout, lang_prefs, 4, 1024)
+	@time optimize_layout(layout, lang_prefs, 1, 1024)
 
-	# data = get_word_data(lang_prefs, 1024)
-	# print(data)
-	# c = get_ngram_data(data, 1)
-	# println(c["he"])
-	# println(c)
-	# println(length(data))
-	# println(length(c))
-	# print(get_bigram_data(data))
-	# print(ngram("somethingng", 2))
 end
 
 main()

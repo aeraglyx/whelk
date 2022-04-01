@@ -21,26 +21,36 @@ function naka_rushton(x::Float64, p::Float64, g::Float64)::Float64
 end
 
 function discard_bad_layouts!(layouts, pivot::Float64, gamma::Float64)
-	new = [layout for (i, layout) in enumerate(layouts) if naka_rushton(convert(Float64, i), pivot, gamma) < rand(Float64)]
+	# new = [layout for (i, layout) in enumerate(layouts) if naka_rushton(convert(Float64, i), pivot, gamma) < rand(Float64)]
+	new = Vector{Layout}()
+	for (i, layout) in enumerate(layouts)
+		if naka_rushton(convert(Float64, i), pivot, gamma) < rand(Float64)
+			push!(new, layout)
+		# else
+		end
+		# layout = nothing
+	end
 	return new
-end  # TODO 
+end
 
 # function naka_rushton(x, p, g) = pow(x / p, g) / (pow(x / p, g) + 1)
 
 
 function print_layout(layout::Layout)
-	println("something")
+	println("something")  # TODO 
+	dict = layout.char_key_dict
+	collect(keys(dict))
 end
 
 # using StatsBase
 function swap_keys!(layout::Layout)
 	dict = layout.char_key_dict
 	keysx = collect(keys(dict))
-	# rnd = StatsBase.sample(1:24, 2, replace=false) 
+	# rnd = StatsBase.sample(1:24, 2, replace=false)  # TODO 
 	rnd1 = rand(1:24)
 	rnd2 = rand(1:24)
 	# println(rnd1)
-	dict[keysx[rnd1]], dict[keysx[rnd2]] = dict[keysx[rnd2]], dict[keysx[rnd1]]  # TODO 
+	dict[keysx[rnd1]], dict[keysx[rnd2]] = dict[keysx[rnd2]], dict[keysx[rnd1]]
 end
 
 function get_word_data(lang_prefs::Dict{String, Float64}, n::Int)::Dict{String, Float64}
@@ -201,11 +211,8 @@ end
 
 function analyze_layout(layout, letter_data, bigram_data)
 	char_key_dict = layout.char_key_dict
-	# println(letter_data)
 	score_letters = analyze_ngrams(letter_data, analyze_letter, char_key_dict)
-	# println(score_letters)
 	score_bigrams = analyze_ngrams(bigram_data, analyze_bigram, char_key_dict)
-	# println(score_bigrams)
 	score::Float64 = score_letters * 0.5 + score_bigrams * 0.5
 	layout.score = score
 	# println(score)
@@ -247,7 +254,8 @@ function optimize_layout(layout::Layout, lang_prefs, iter::Int = 64, data_length
 			# print("\n", end="")
 			# print(f"Iteration {str(i + 1).zfill(len(str(iter)))} / {iter}")
 			println("Best layout so far:")
-			# println(best_layout_so_far.char_key_dict)
+			print_layout(best_layout_so_far)
+			println(best_layout_so_far.score)
 			# best_layout_so_far.print_stats()
 		end
 		last_best_layout = best_layout_so_far
@@ -257,7 +265,6 @@ end
 
 
 
-	
 function main()
 
 	chars = [
@@ -265,7 +272,16 @@ function main()
 		's' 't' 'n' 'r' 'a' 'e' 'i' 'o'
 		'v' 'm' 'h' 'c' 'z' 'y' 'w' 'k'
 	]
-	
+
+	layout_string = "
+	c w h m  g u p j
+	s r n t  a e i o
+	b v l d  f z y k
+	"
+	# chars = only.(split(layout_string))
+	chars = collect(join(split(layout_string)))
+	# println(chars)
+	chars = permutedims(reshape(chars, (8, 3)))
 	char_key_dict = Dict{Char, Key}()
 	
 	for (i, col) in enumerate(eachcol(chars))
@@ -281,7 +297,7 @@ function main()
 	# print(layout.char_key_dict)
 	
 	lang_prefs = Dict("en" => 0.7, "cs" => 0.3)
-	@time optimize_layout(layout, lang_prefs, 16, 4096)
+	@time optimize_layout(layout, lang_prefs, 1, 4096)
 
 end
 

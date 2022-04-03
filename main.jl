@@ -45,7 +45,6 @@ function print_layout(layout::Layout)
 	println(join(chars[17:20], ' ') * "  " * join(chars[21:24], ' '))
 end
 
-# using StatsBase
 function swap_keys!(layout::Layout, freq_keys_on_home_row::Bool)
 	vec = layout.layout_chars
 	n::Int = rand(1:8)
@@ -69,39 +68,44 @@ function swap_keys!(layout::Layout, freq_keys_on_home_row::Bool)
 	end
 end
 
+function make_char_dict(layout_chars)
+	char_key_dict::Dict{Char, Int} = Dict(layout_chars[i] => i for i in 1:24)
+	return char_key_dict
+end
+
 function get_word_data(lang_prefs::Dict{String, Float64}, n::Int)::Dict{String, Float64}
 	datax = Dict{String, Float64}()
 	for (lang, weight) in lang_prefs
 		data_filename = "freq_data/" * lang * "_50k.txt"
-		data = Vector{Tuple{String, Int64}}(undef, n)
+		data_per_lang = Dict{String, Float64}()
 		freq_total::UInt = 0
 		open(data_filename, "r") do file
-			for i in 1:n
+			for _ in 1:n
 				word, freq = split(readline(file), ' ')
 				word = normalize(string(word), stripmark=true, casefold=true)
+				word = filter(isascii, word)
 				word = filter(isletter, word)
-				# println(word)
 				freq = parse(UInt, freq)
 				freq_total += freq
-				data[i] = (word, freq)
+				data_per_lang[word] = freq
 			end
 		end
-		mergewith!(+, datax, Dict(word => freq * weight / freq_total for (word, freq) in data))
+		mergewith!(+, datax, Dict(word => freq * weight / freq_total for (word, freq) in data_per_lang))
 	end
 	return datax
 end
 
-# function ngram(s::AbstractString, n::Int)
-# 	[SubString(s, i:i+n-1) for i = 1:length(s)-n+1]
-# end
+function ngrams_from_word(word, n)
+	return [view(word, i:i+n-1) for i = 1:length(word)-n+1]
+end
 
 function get_ngram_data(word_freq_data::Dict{String, Float64}, n::Int)
 	bigram_data = Dict{SubString, Float64}()
 	for (word, freq) in word_freq_data
-		ngrams = [SubString(word, i:i+n-1) for i = 1:length(word)-n+1]
-		# ngrams = ngram(word, 1)
-		for ngram in ngrams
-			# datax[ngram] = ngram in datax ? datax[ngram] + freq : freq
+		if length(word) < n
+			continue
+		end
+		for ngram in ngrams_from_word(word, n)
 			if ngram in keys(bigram_data)
 				bigram_data[ngram] += freq
 			else
@@ -115,7 +119,7 @@ function get_ngram_data(word_freq_data::Dict{String, Float64}, n::Int)
 end
 
 function analyze_letter(char::SubString, char_key_dict, key_objects, settings)::Float64
-	if only(char) == 'x' || only(char) == 'q'
+	if only(char) == 'x' || only(char) == 'q'  # TODO 
 		return 0.0
 	end
 	key::Key = key_objects[char_key_dict[only(char)]]
@@ -128,7 +132,7 @@ end
 
 function analyze_bigram(bigram::SubString, char_key_dict, key_objects, settings)::Float64
 
-	if only(bigram[1]) == 'x' || only(bigram[1]) == 'q' || only(bigram[2]) == 'x' || only(bigram[2]) == 'q'
+	if only(bigram[1]) == 'x' || only(bigram[1]) == 'q' || only(bigram[2]) == 'x' || only(bigram[2]) == 'q'  # TODO 
 		return 0.0
 	end
 
@@ -164,24 +168,22 @@ function analyze_ngrams(ngram_data, analyze_ngram, char_key_dict, key_objects, s
 	return score
 end
 
-function get_finger_load(char_key_dict, letter_data, key_objects)
+function get_finger_load(char_key_dict, letter_data, key_objects, settings)
 	f = Vector{Float64}(undef, 8)
+	f = zeros(8)
 	for (char, key_idx) in char_key_dict
 		key = key_objects[key_idx]
-		f[key.hand ? 4 + key.finger : 5 - key.finger] += letter_data[string(char)]
+		finger_idx = key.hand ? 4 + key.finger : 5 - key.finger
+		f[finger_idx] += letter_data[string(char)] * settings.finger_efforts[key.finger]
 	end
-	print(f)
+	# f .*= sum(collect(settings.finger_efforts))
+	# println(sum(collect(f)))
 	return f
-end
-
-function make_char_dict(chars)
-	char_key_dict::Dict{Char, Int} = Dict(chars[i] => i for i in 1:24)
-	return char_key_dict
 end
 
 function analyze_layout(layout, letter_data, bigram_data, key_objects::Tuple, settings)::Float64
 	char_key_dict = make_char_dict(layout.layout_chars)
-	# finger_load = get_finger_load(char_key_dict, letter_data, key_objects)
+	finger_load = get_finger_load(char_key_dict, letter_data, key_objects, settings)
 	
 	score_letters = analyze_ngrams(letter_data, analyze_letter, char_key_dict, key_objects, settings)
 	score_bigrams = analyze_ngrams(bigram_data, analyze_bigram, char_key_dict, key_objects, settings)
@@ -286,7 +288,7 @@ function main()
 		prefer_bottom_row = 0.0  # TODO 
 	)
 	@time optimize_layout(layout, 16, 4096, key_objects, settings)
-	# BUG duplicate "you" on line 8474 in "en" make it freak out
+	# XXX duplicate "you" on line 8474 in "en" has non ascii
 
 end
 

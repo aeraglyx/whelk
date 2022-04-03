@@ -16,7 +16,7 @@ Lateral motion is bad, stretching and curling is fine. So why not have 3 keys pe
 □ □ □ □       □ □ □ □
 ■ ■ ■ ■       ■ ■ ■ ■
 □ □ □ □       □ □ □ □
-	□ ■ □   □ ■ □
+    □ ■ □   □ ■ □
 ```
 
 

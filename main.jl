@@ -118,11 +118,7 @@ function get_ngram_data(word_freq_data::Dict{String, Float64}, n::Int)
 	return bigram_data
 end
 
-function analyze_letter(char::SubString, char_key_dict, key_objects, settings)::Float64
-	if only(char) == 'x' || only(char) == 'q'  # TODO 
-		return 0.0
-	end
-	key::Key = key_objects[char_key_dict[only(char)]]
+function stroke_effort(key, settings)::Float64
 	stroke_effort::Float64 = settings.finger_efforts[key.finger]
 	if key.row != 2
 		stroke_effort *= settings.not_home_row
@@ -130,11 +126,12 @@ function analyze_letter(char::SubString, char_key_dict, key_objects, settings)::
 	return stroke_effort
 end
 
-function analyze_bigram(bigram::SubString, char_key_dict, key_objects, settings)::Float64
+function analyze_letter(char::SubString, char_key_dict, key_objects, settings)::Float64
+	key::Key = key_objects[char_key_dict[only(char)]]
+	return stroke_effort(key, settings)
+end
 
-	if only(bigram[1]) == 'x' || only(bigram[1]) == 'q' || only(bigram[2]) == 'x' || only(bigram[2]) == 'q'  # TODO 
-		return 0.0
-	end
+function analyze_bigram(bigram::SubString, char_key_dict, key_objects, settings)::Float64
 
 	# TODO precompute key-key pairs ?
 	
@@ -142,6 +139,7 @@ function analyze_bigram(bigram::SubString, char_key_dict, key_objects, settings)
 	key_2::Key = key_objects[char_key_dict[bigram[2]]]
 	
 	trans_effort::Float64 = (settings.finger_efforts[key_1.finger] + settings.finger_efforts[key_2.finger]) * 0.5
+	# TODO use stroke_effort(key, settings) function
 
 	if key_1.hand == key_2.hand
 		if key_1.finger == key_2.finger
@@ -159,11 +157,15 @@ function analyze_bigram(bigram::SubString, char_key_dict, key_objects, settings)
 	return trans_effort
 end
 
-function analyze_ngrams(ngram_data, analyze_ngram, char_key_dict, key_objects, settings)::Float64
+# TODO trigrams
+
+function analyze_ngrams(ngram_data, analyze_ngram, char_key_dict, key_objects, settings, letters)::Float64
 	score::Float64 = 0.0
 	for (ngram, freq) in ngram_data
-		ngram_score = analyze_ngram(ngram, char_key_dict, key_objects, settings)
-		score += ngram_score * freq
+		if issubset(collect(ngram), letters)
+			ngram_score = analyze_ngram(ngram, char_key_dict, key_objects, settings)
+			score += ngram_score * freq
+		end
 	end
 	return score
 end
@@ -181,22 +183,74 @@ function get_finger_load(char_key_dict, letter_data, key_objects, settings)
 	return f
 end
 
-function analyze_layout(layout, letter_data, bigram_data, key_objects::Tuple, settings)::Float64
+function analyze_layout(layout, letter_data, bigram_data, key_objects::Tuple, settings, letters)::Float64
 	char_key_dict = make_char_dict(layout.layout_chars)
-	finger_load = get_finger_load(char_key_dict, letter_data, key_objects, settings)
+	# finger_load = get_finger_load(char_key_dict, letter_data, key_objects, settings)
 	
-	score_letters = analyze_ngrams(letter_data, analyze_letter, char_key_dict, key_objects, settings)
-	score_bigrams = analyze_ngrams(bigram_data, analyze_bigram, char_key_dict, key_objects, settings)
+	score_letters = analyze_ngrams(letter_data, analyze_letter, char_key_dict, key_objects, settings, letters)
+	score_bigrams = analyze_ngrams(bigram_data, analyze_bigram, char_key_dict, key_objects, settings, letters)
 	score::Float64 = (score_letters + score_bigrams) * 0.5
 	layout.score = score
 	# layout.finger_load = finger_load
 end
 
-function optimize_layout(layout::Layout, iter::Int, data_length::Int, key_objects::Tuple, settings)
+function get_char_array(key_objects, letter_data, settings)
+	
+	efforts = Vector{Float64}(undef, 24)
+	efforts = [stroke_effort(key, settings) for key in key_objects]
+	# efforts .+= (rand() - 0.5) * 0.01  # enforce randomness for symmetrical efforts
+	# println(efforts)
+	
+	letters = sort!(collect(letter_data), by=x->x[2], rev=true)
+	letters = [only(letter.first) for letter in letters]
+	# not_used = letters[25:end]
+	letters = letters[1:24]
+	# println(not_used)
+
+	# letters = letters[sortperm(efforts)]
+	return letters
+
+end
+
+function optimize_layout(iter::Int, data_length::Int, settings)
+
+	key_objects = (
+		Key(false, 4, 1),
+		Key(false, 3, 1),
+		Key(false, 2, 1),
+		Key(false, 1, 1),
+		Key(true,  1, 1),
+		Key(true,  2, 1),
+		Key(true,  3, 1),
+		Key(true,  4, 1),
+		Key(false, 4, 2),
+		Key(false, 3, 2),
+		Key(false, 2, 2),
+		Key(false, 1, 2),
+		Key(true,  1, 2),
+		Key(true,  2, 2),
+		Key(true,  3, 2),
+		Key(true,  4, 2),
+		Key(false, 4, 3),
+		Key(false, 3, 3),
+		Key(false, 2, 3),
+		Key(false, 1, 3),
+		Key(true,  1, 3),
+		Key(true,  2, 3),
+		Key(true,  3, 3),
+		Key(true,  4, 3)
+	)
+
 	word_data = get_word_data(settings.lang_prefs, data_length)
 	letter_data = get_ngram_data(word_data, 1)
 	bigram_data = get_ngram_data(word_data, 2)
-	analyze_layout(layout, letter_data, bigram_data, key_objects, settings)
+
+	letters = get_char_array(key_objects, letter_data, settings)
+
+	layout = Layout(letters, Inf, Vector{Float64}(undef, 8))
+	print_layout(layout)
+
+	analyze_layout(layout, letter_data, bigram_data, key_objects, settings, letters)
 	layouts = [layout]
 	last_best_layout = layout
 	for i in 1:iter
@@ -209,7 +263,7 @@ function optimize_layout(layout::Layout, iter::Int, data_length::Int, key_object
 				if layout.layout_chars == tmp_layout.layout_chars
 					continue
 				end
-				analyze_layout(tmp_layout, letter_data, bigram_data, key_objects, settings)
+				analyze_layout(tmp_layout, letter_data, bigram_data, key_objects, settings, letters)
 				push!(new_layouts, tmp_layout)
 			end
 			sort!(new_layouts, by = layout -> layout.score, rev = false)
@@ -239,43 +293,11 @@ end
 
 function main()
 
-	key_objects = (
-		Key(false, 4, 1),
-		Key(false, 3, 1),
-		Key(false, 2, 1),
-		Key(false, 1, 1),
-		Key(true,  1, 1),
-		Key(true,  2, 1),
-		Key(true,  3, 1),
-		Key(true,  4, 1),
-		Key(false, 4, 2),
-		Key(false, 3, 2),
-		Key(false, 2, 2),
-		Key(false, 1, 2),
-		Key(true,  1, 2),
-		Key(true,  2, 2),
-		Key(true,  3, 2),
-		Key(true,  4, 2),
-		Key(false, 4, 3),
-		Key(false, 3, 3),
-		Key(false, 2, 3),
-		Key(false, 1, 3),
-		Key(true,  1, 3),
-		Key(true,  2, 3),
-		Key(true,  3, 3),
-		Key(true,  4, 3))
-
-	layout_string = "
-	b f r m  u o p j
-	w s n t  i e h g
-	v c l d  y a k z
-	"
-	chars = collect(join(split(layout_string)))
-
-	layout = Layout(chars, Inf, Vector{Float64}(undef, 8))
+	# efforts = [4.6, 3.0, 2.0, 2.4, 2.4, 2.0, 3.0, 4.6, 2.3, 1.5, 1.0, 1.2, 1.2, 1.0, 1.5, 2.3, 4.6, 3.0, 2.0, 2.4, 2.4, 2.0, 3.0, 4.6]
+	# letters = ['e', 't', 'o', 'a', 'i', 'n', 'h', 's', 'r', 'l', 'd', 'w', 'm', 'g', 'y', 'u', 'c', 'f', 'b', 'k', 'p', 'v', 'j', 'x']
+	# println(letters[sortperm(efforts)])
 	
 	settings = (
-		# lang_prefs = Dict("en" => 0.7, "cs" => 0.3),
 		lang_prefs = Dict("en" => 1.0),
 		finger_efforts = (1.2, 1.0, 1.5, 2.3),
 		sfb = 4.0,
@@ -285,9 +307,10 @@ function main()
 		freq_keys_on_home_row = false,
 		not_home_row = 2.0,
 		enforce_balance = 1.0,  # TODO 
-		prefer_bottom_row = 0.0  # TODO 
+		prefer_bottom_row = 0.0  # TODO # lang_prefs = Dict("en" => 0.7, "cs" => 0.3),   Dict("en" => 1.0),
+		
 	)
-	@time optimize_layout(layout, 16, 4096, key_objects, settings)
+	@time optimize_layout(64, 4096, settings)
 	# XXX duplicate "you" on line 8474 in "en" has non ascii
 
 end

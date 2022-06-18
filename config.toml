@@ -1,0 +1,27 @@
+[lang_prefs]
+en = 1.0
+cs = 0.0
+
+# physical
+finger_strengths = [0.8, 1.0, 0.7, 0.4]
+
+# penalties
+sfb = 4.0
+inroll = 0.75
+outroll = 1.25
+alter = 0.75  # hand alteration, below 1.0 for more alteration
+home_row = 2.0  # high value enforces the most frequent chars on home row
+prefer_top_row = 0.0  # negative for more prevalent bottom row
+
+row_change = 0.5
+independence = 0.5
+
+# misc
+enforce_balance = 1.0
+vowel_side = true  # false for left, true for right
+keep_familiar = 0.5
+ref_layout = """
+q w f p   l u y -
+a r s t   n e i o
+z x c d   h - - -
+"""

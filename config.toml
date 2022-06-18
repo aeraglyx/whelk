@@ -5,21 +5,22 @@ cs = 0.0
 # physical
 finger_strengths = [0.8, 1.0, 0.7, 0.4]
 
-# penalties
-sfb = 4.0
-inroll = 0.75
-outroll = 1.25
-alter = 0.75  # hand alteration, below 1.0 for more alteration
-home_row = 2.0  # high value enforces the most frequent chars on home row
-prefer_top_row = 0.0  # negative for more prevalent bottom row
+# stats
+sfb = 0.25  # same fimger bigrams
+inroll = 1.25  # inward rolls
+outroll = 0.75  # outward rolls
+alter = 1.25  # hand alteration, below 1.0 for more alteration
 
+home_row = 1.0  # high value enforces the most frequent chars on home row
+prefer_top_row = 0.0  # negative for more prevalent bottom row
 row_change = 0.5
-independence = 0.5
+independence = 1.0  # makes bigrams by neighbor fingers more significant
+mono_vs_bi = [0.5, 0.5]
 
 # misc
 enforce_balance = 1.0
 vowel_side = true  # false for left, true for right
-keep_familiar = 0.5
+keep_familiar = 0.5  # 0 has no effect, high value for fewer changes
 ref_layout = """
 q w f p   l u y -
 a r s t   n e i o

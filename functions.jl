@@ -44,9 +44,9 @@ end
 
 function normalize_vowels!(layout::Layout, vowel_side)
 	chars = layout.layout_chars
-	left_chars = chars[1:4; 9:12; 17:20]
+	left_chars = chars[[1:4; 9:12; 17:20]]
 	vowels = ['a', 'e', 'i', 'y', 'o', 'u']
-	n = length(intersection(left_chars, vowels))
+	n = length(intersect(left_chars, vowels))
 	if (!vowel_side && n < 3) || (vowel_side && n > 3)
 		layout.layout_chars = mirror_chars(chars)
 	end
@@ -57,16 +57,16 @@ function make_char_dict(layout_chars)
 	return char_key_dict
 end
 
-function make_char_dict_ref(settings.ref)
-	layout_chars = normalize(string(layout_chars), stripmark=true, casefold=true)
+function make_char_dict_ref(ref_layout)
+	layout_chars = normalize(string(ref_layout), stripmark=true, casefold=true)
 	char_key_dict::Dict{Char, Int} = Dict(layout_chars[i] => i for i in 1:24)
 	char_key_dict = filter(x -> isletter(first(x)), char_key_dict)
 	return char_key_dict
 end
 
-function get_word_data(lang_prefs::Dict{String, Float64}, n::Int)::Dict{String, Float64}
+function get_word_data(langs::Dict{String, Any}, n::Int)::Dict{String, Float64}
 	datax = Dict{String, Float64}()
-	for (lang, weight) in lang_prefs
+	for (lang, weight) in langs
 		weight == 0.0 && continue
 		data_filename = "freq_data/" * lang * "_50k.txt"
 		# using HTTP
@@ -114,7 +114,7 @@ end
 function stroke_effort(key, settings)::Float64
 	stroke_effort::Float64 = 1.0 / settings.finger_strengths[key.finger]
 	key.row != 2 && (stroke_effort *= 2.0 ^ settings.home_row)
-	stroke_effort *= 2.0 ^ ((key.row - 2.0) * settings.prefer_bottom_row)
+	stroke_effort *= 2.0 ^ ((key.row - 2.0) * settings.prefer_top_row)
 	return stroke_effort
 end
 
@@ -131,11 +131,12 @@ function analyze_bigram(bigram::SubString, char_key_dict, key_objects, settings)
 	
 	trans_effort::Float64 = 1.0
 	if key_1.hand == key_2.hand
-		if key_1.finger == key_2.finger
+		finger_diff = key_2.finger - key_1.finger
+		if finger_diff == 0
 			trans_effort /= settings.sfb
-		elseif key_1.finger > key_2.finger
+		elseif finger_diff < 0
 			trans_effort /= settings.inroll
-		elseif key_1.finger < key_2.finger
+		elseif finger_diff > 0
 			trans_effort /= settings.outroll
 		end
 		travel = 2.0 ^ (abs(key_1.row - key_2.row) * settings.row_change)
@@ -174,8 +175,9 @@ end
 
 function how_hard_to_learn(char_key_dict, key_objects, settings, letter_data)
 	
-	char_key_dict_ref = make_char_dict_ref(settings.ref)
+	char_key_dict_ref = make_char_dict_ref(settings.ref_layout)
 	total::Float64 = 0.0
+	freq_total::Float64 = 0.0
 	
 	for char in char_key_dict
 
@@ -197,7 +199,8 @@ function how_hard_to_learn(char_key_dict, key_objects, settings, letter_data)
 		key_diff *= freq
 		total += key_diff
 	end
-	return total / freq_total
+	# return total / freq_total
+	return 1.0
 end
 
 function get_char_array(key_objects, letter_data, settings)
@@ -211,12 +214,19 @@ end
 function get_char_array_v2(key_objects, letter_data, settings)
 	efforts = Vector{Float64}(undef, 24)
 	efforts = [stroke_effort(key, settings) for key in key_objects]
-	letters = collect(letter_data)
+	println(efforts)	
+	# letters = collect(letter_data)
+	letters = sort(collect(letter_data), by=x->x[2], rev=true)[1:24]
+	# letters = reverse(letters)
 	letters = [only(letter.first) for letter in letters]
-	freq = [letter.second for letter in letters]
-	effort_perm = sortperm(efforts)
-	freq_perm = sortperm(freq)
-	letters[freq_perm][effort_perm][1:24]
+	println(letters)
+	# letters = [only(letter.first) for letter in letters]
+	# freq = [letter.second for letter in letters]
+	effort_perm = sortperm(efforts, rev=true)  # TODO 
+	println(effort_perm)
+
+	# freq_perm = sortperm(freq)
+	letters = letters[effort_perm]
 	return letters
 end
 
@@ -227,10 +237,10 @@ function analyze_layout(layout, letter_data, bigram_data, key_objects::Tuple, se
 	
 	score_letters = analyze_ngrams(letter_data, analyze_letter, char_key_dict, key_objects, settings, letters)
 	score_bigrams = analyze_ngrams(bigram_data, analyze_bigram, char_key_dict, key_objects, settings, letters)
-	how_hard_to_learn = how_hard_to_learn(char_key_dict, key_objects, settings, letter_data)
+	difficulty = how_hard_to_learn(char_key_dict, key_objects, settings, letter_data)
 
-	score::Float64 = [score_letters + score_bigrams] .* settings.mono_vs_bi
-	score *= how_hard_to_learn
+	score::Float64 = sum([score_letters + score_bigrams] .* settings.mono_vs_bi)
+	score *= difficulty
 
 	layout.score = score
 	layout.finger_load = finger_load
@@ -266,11 +276,11 @@ function optimize_layout(iter::Int, data_length::Int, settings)
 		Key(true,  4, 3)
 	)
 
-	word_data = get_word_data(settings.lang_prefs, data_length)
+	word_data = get_word_data(settings.langs, data_length)
 	letter_data = get_ngram_data(word_data, 1)
 	bigram_data = get_ngram_data(word_data, 2)
 
-	letters = get_char_array(key_objects, letter_data, settings)  # TODO clean up data so it doesnt contain unused chars?
+	letters = get_char_array_v2(key_objects, letter_data, settings)  # TODO clean up data so it doesnt contain unused chars?
 
 	layout = Layout(letters, Inf, Vector{Float64}(undef, 8))
 	normalize_vowels!(layout, settings.vowel_side)

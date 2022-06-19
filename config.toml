@@ -1,14 +1,13 @@
-[lang_prefs]
-en = 1.0
-cs = 0.0
+langs.en = 1.0
+langs.cs = 0.0
 
-# physical
 finger_strengths = [0.8, 1.0, 0.7, 0.4]  # index to pinkie
 
 # stats
 sfb = 0.25  # same fimger bigrams
 inroll = 1.25  # inward rolls
 outroll = 0.75  # outward rolls
+
 alter = 1.25  # hand alteration, below 1.0 for more alteration
 
 home_row = 1.0  # high value enforces the most frequent chars on home row

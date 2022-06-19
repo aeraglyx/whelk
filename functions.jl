@@ -69,6 +69,9 @@ function get_word_data(lang_prefs::Dict{String, Float64}, n::Int)::Dict{String, 
 	for (lang, weight) in lang_prefs
 		weight == 0.0 && continue
 		data_filename = "freq_data/" * lang * "_50k.txt"
+		# using HTTP
+		# url_base = "https://raw.githubusercontent.com/hermitdave/FrequencyWords/master/content/2018/"
+		# HTTP.get(url_base * lang * "/" * lang * "_50k.txt")
 		data_per_lang = Dict{String, Float64}()
 		freq_total::UInt = 0
 		open(data_filename, "r") do file

@@ -32,6 +32,12 @@ Even on 34 or 36 key layouts such as Ferris Sweep or GergoPlex there are 6 "bad"
 - Edit `config.toml`
 - Run `main.jl`
 
+## Attributions
+
+For the word frequency data I'm accessing hermitdave's FrequencyWords repository:
+
+https://github.com/hermitdave/FrequencyWords
+
 ---
 
 > We don’t stand a whelk’s chance in a supernova.

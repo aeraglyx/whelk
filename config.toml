@@ -3,7 +3,7 @@ en = 1.0
 cs = 0.0
 
 # physical
-finger_strengths = [0.8, 1.0, 0.7, 0.4]
+finger_strengths = [0.8, 1.0, 0.7, 0.4]  # index to pinkie
 
 # stats
 sfb = 0.25  # same fimger bigrams

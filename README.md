@@ -1,6 +1,6 @@
 # Whelk
 
-Nothing to see here, still WIP. Just a little experiment to generate a decent 8x3 keyboard layout based on language preferences.
+Just a little 8x3 keyboard layout generator based on user preferences. Still WIP. 
 
 Initial layout the program found (not final):
 ```
@@ -9,9 +9,15 @@ w s n t  i e h g
 v c l d  y a k z
 ```
 
+## Goal
+
+The initial push for creating this was that after learning Colemak DH and getting into ergonomic keyboards I wanted to ditch the inner columns completely. So I needed a Colemak-y 24 key layout. Also it's a way for me to learn Julia and make something potentially useful.
+
 ## Why 8x3
 
-Lateral motion is bad, stretching and curling is fine. So why not have 3 keys per each finger? On 36 key layouts there are 6 bad keys (inner columns), and 4 rogue punctuation marks. If we keep only letters on the main block, there will be 2 letters that won't fit. That's not a problem however since on a layout this small you'd utilize layers heavily anyway. Here's the form factor I'm working with:
+There's a certain simplicity and elegance to it. Lateral motion is bad, #1DFH (one distance from home) is good. If we don't count thumbs, that gives us 24 keys.
+
+Even on 34 or 36 key layouts such as Ferris Sweep or GergoPlex there are 6 "bad" keys (inner columns) and usually 4 punctuation marks in the main zone. If we try to keep only alphas on the main block, 2 low frequency letters won't fit and will have to be on a different layer. Here's what I'm working with:
 ```
 □ □ □ □       □ □ □ □
 ■ ■ ■ ■       ■ ■ ■ ■
@@ -19,11 +25,12 @@ Lateral motion is bad, stretching and curling is fine. So why not have 3 keys pe
     □ ■ □   □ ■ □
 ```
 
+## How to generate your own layout
 
-
-## Goal
-
-I wanted an idealized simplistic 
+- Clone the repository
+- (install Julia)
+- Edit `config.toml`
+- Run `main.jl`
 
 ---
 

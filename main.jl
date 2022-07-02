@@ -3,15 +3,15 @@ using TOML
 include("structs.jl")
 include("functions.jl")
 
-function main()
-	
-	config = "config.toml"
+function get_settings(config)
 	dict = TOML.parsefile(config)
 	settings = (; (Symbol(k) => v for (k,v) in dict)...)
-	# println(settings)
+	return settings
+end
 
-	@time optimize_layout(64, 4096, settings)
-	# XXX duplicate "you" on line 8474 in "en" has non ascii
+function main()
+	settings = get_settings("config.toml")
+	@time optimize_layout(settings)
 end
 
 main()

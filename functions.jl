@@ -4,6 +4,7 @@ using HTTP
 
 
 function naka_rushton(x::Float64, p::Float64, g::Float64)::Float64
+	x = max(0, x - 4)  # so it never deletes the best 4
 	tmp = (x / p) ^ g
 	return tmp / (tmp + 1.0)
 end
@@ -120,7 +121,7 @@ function filter_dict!(dict, threshold)
 	return dict
 end
 
-function get_letter_freqs(word_freq_data::Dict{String, Float64}, settings)
+function get_letter_freqs(word_freq_data::Dict{String, Float64})
 	letter_freqs = Dict{Vector{Char}, Float64}()
 	for (word, freq) in word_freq_data
 		for letter in word  # todo
@@ -147,9 +148,11 @@ function get_bigram_freqs(word_freq_data::Dict{String, Float64}, settings)
 			end
 		end
 	end
+	total = length(bigram_freqs)
 	bigram_freqs = normalize_dict!(bigram_freqs)
-	bigram_freqs = filter_dict!(bigram_freqs, settings.ngram_quality)
+	bigram_freqs = filter_dict!(bigram_freqs, settings.bigram_quality)
 	bigram_freqs = normalize_dict!(bigram_freqs)
+	println(length(bigram_freqs), " / ", total, " bigrams")
 	return bigram_freqs
 end
 
@@ -165,9 +168,11 @@ function get_trigram_freqs(word_freq_data::Dict{String, Float64}, settings)
 			end
 		end
 	end
+	total = length(trigram_freqs)
 	trigram_freqs = normalize_dict!(trigram_freqs)
-	trigram_freqs = filter_dict!(trigram_freqs, settings.ngram_quality)
+	trigram_freqs = filter_dict!(trigram_freqs, settings.trigram_quality)
 	trigram_freqs = normalize_dict!(trigram_freqs)
+	println(length(trigram_freqs), " / ", total, " trigrams\n")
 	return trigram_freqs
 end
 
@@ -209,7 +214,6 @@ end
 
 function analyze_trigram(trigram, key_objects, settings)::Float64
 
-	# TODO precompute key-key pairs ?
 	key_1::Key = key_objects[trigram[1]]
 	key_2::Key = key_objects[trigram[2]]
 	key_3::Key = key_objects[trigram[3]]
@@ -237,12 +241,13 @@ function analyze_trigram(trigram, key_objects, settings)::Float64
 	else
 		trans_effort /= settings.alter
 	end
-	return trans_effort
+	return 1.0
 end
 
-function evaluate_ngrams(ngram_freqs, ngram_efforts, char_key_dict, letters)::Float64
+function evaluate_ngrams(ngram_freqs, ngram_efforts, char_key_dict)::Float64
 	total_freq::Float64 = 0.0
 	total_score::Float64 = 0.0
+	letters = [char for (char, _) in char_key_dict]
 	for (ngram, freq) in ngram_freqs
 		!issubset(collect(ngram), letters) && continue
 		ngram_idx = [char_key_dict[ngram[n]] for n in 1:length(ngram)]
@@ -327,11 +332,9 @@ function analyze_layout(layout, ngram_freqs, ngram_efforts, key_objects::Tuple, 
 	char_key_dict = make_char_dict(layout.layout_chars)
 	finger_load = get_finger_load(char_key_dict, letter_freqs, key_objects, settings)
 	
-	letters = layout.layout_chars
-
-	letter_score = evaluate_ngrams(letter_freqs, letter_efforts, char_key_dict, letters)
-	bigram_score = evaluate_ngrams(bigram_freqs, bigram_efforts, char_key_dict, letters)
-	trigram_score = evaluate_ngrams(trigram_freqs, trigram_efforts, char_key_dict, letters)
+	letter_score = evaluate_ngrams(letter_freqs, letter_efforts, char_key_dict)
+	bigram_score = evaluate_ngrams(bigram_freqs, bigram_efforts, char_key_dict)
+	trigram_score = evaluate_ngrams(trigram_freqs, trigram_efforts, char_key_dict)
 
 	difficulty = how_hard_to_learn(char_key_dict, key_objects, settings, letter_freqs)
 
@@ -339,6 +342,49 @@ function analyze_layout(layout, ngram_freqs, ngram_efforts, key_objects::Tuple, 
 	layout.score = score
 	return score
 end
+
+function get_ngram_efforts(key_objects, settings)
+	letter_efforts = Dict{Vector{Int64}, Float64}()
+	for i in 1:24
+		letter = [i]
+		score = analyze_letter(letter, key_objects, settings)
+		letter in keys(letter_efforts) && continue
+		letter_efforts[letter] = score
+	end
+	bigram_efforts = Dict{Vector{Int64}, Float64}()
+	for i in 1:24
+		for j in 1:24
+			bigram = [i, j]
+			score = analyze_bigram(bigram, key_objects, settings)
+			bigram in keys(bigram_efforts) && continue
+			bigram_efforts[bigram] = score
+		end
+	end
+	trigram_efforts = Dict{Vector{Int64}, Float64}()
+	for i in 1:24
+		for j in 1:24
+			for k in 1:24
+				trigram = [i, j, k]
+				score = analyze_trigram(trigram, key_objects, settings)
+				trigram in keys(trigram_efforts) && continue
+				trigram_efforts[trigram] = score
+			end
+		end
+	end
+	ngram_efforts = (letter_efforts, bigram_efforts, trigram_efforts)
+	return ngram_efforts
+end
+
+function get_ngram_freqs(settings)
+	word_data = get_word_data(settings.langs)
+	letter_freqs = get_letter_freqs(word_data)
+	bigram_freqs = get_bigram_freqs(word_data, settings)
+	trigram_freqs = get_trigram_freqs(word_data, settings)
+	ngram_freqs = (letter_freqs, bigram_freqs, trigram_freqs)
+	return ngram_freqs
+end
+
+# TODO mirrored ngrams to reduce lookup
 
 function optimize_layout(settings)
 
@@ -368,51 +414,13 @@ function optimize_layout(settings)
 		Key(true,  3, 3),
 		Key(true,  4, 3)
 	)
-		
-	letter_efforts = Dict()
-	for i in 1:24
-		letter = [i]
-		score = analyze_letter(letter, key_objects, settings)
-		letter in keys(letter_efforts) && continue
-		letter_efforts[letter] = score
-	end
-	
-	bigram_efforts = Dict()
-	for i in 1:24
-		for j in 1:24
-			bigram = [i, j]
-			score = analyze_bigram(bigram, key_objects, settings)
-			bigram in keys(bigram_efforts) && continue
-			bigram_efforts[bigram] = score
-		end
-	end
-	
-	trigram_efforts = Dict()
-	for i in 1:24
-		for j in 1:24
-			for k in 1:24
-				trigram = [i, j, k]
-				score = analyze_trigram(trigram, key_objects, settings)
-				trigram in keys(trigram_efforts) && continue
-				trigram_efforts[trigram] = score
-			end
-		end
-	end
 
-	ngram_efforts = (letter_efforts, bigram_efforts, trigram_efforts)
+	ngram_efforts = get_ngram_efforts(key_objects, settings)
+	ngram_freqs = get_ngram_freqs(settings)
 
-	word_data = get_word_data(settings.langs)
-	letter_freqs = get_letter_freqs(word_data, settings)
-	bigram_freqs = get_bigram_freqs(word_data, settings)
-	trigram_freqs = get_trigram_freqs(word_data, settings)
-	ngram_freqs = (letter_freqs, bigram_freqs, trigram_freqs)
-
-	# letters = get_char_array(key_objects, letter_data, settings)  # TODO clean up data so it doesnt contain unused chars?
-
-	# layout = Layout(letters, Inf, Vector{Float64}(undef, 8))
 	layouts = []
 	for _ in 1:settings.initial_states
-		chars = get_char_array(key_objects, letter_freqs, settings)
+		chars = get_char_array(key_objects, ngram_freqs[1], settings)
 		layout = Layout(chars, Inf, Vector{Float64}(undef, 8))
 		normalize_vowels!(layout, settings.vowel_side)
 		analyze_layout(layout, ngram_freqs, ngram_efforts, key_objects, settings)
@@ -437,11 +445,11 @@ function optimize_layout(settings)
 				push!(new_layouts, tmp_layout)
 			end
 			sort!(new_layouts, by=layout->layout.score, rev=false)
-			new_layouts = discard_bad_layouts!(new_layouts, 16.0, 4.0)
+			new_layouts = discard_bad_layouts!(new_layouts, 32.0, 4.0)
 			append!(layouts, new_layouts)
 		end
 		sort!(layouts, by=layout->layout.score, rev=false)
-		layouts = discard_bad_layouts!(layouts, 64.0, 4.0)
+		layouts = discard_bad_layouts!(layouts, 128.0, 4.0)
 		best_layout_so_far = layouts[1]
 		if best_layout_so_far.layout_chars != last_best_layout.layout_chars
 			println("$i / $iter")
@@ -453,6 +461,6 @@ function optimize_layout(settings)
 		last_best_layout = best_layout_so_far
 	end
 	speed = round(Int, count/(time()-t))
-	println("Speed: $speed layouts/s")
+	println("Speed: ", speed, " layouts/s")
 	print("\n")
 end

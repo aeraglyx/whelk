@@ -51,6 +51,8 @@ function normalize_vowels!(layout::Layout, vowel_side)
 	if (!vowel_side && n < 3) || (vowel_side && n > 3)
 		layout.layout_chars = mirror_chars(chars)
 	end
+	# TODO e on one side
+	# TODO or better yet, weight vowels by their freq
 end
 
 function make_char_dict(layout_chars)
@@ -66,16 +68,21 @@ function make_char_dict_ref(ref_layout)
 	return char_key_dict
 end
 
+function get_data(lang)
+	url_base = "https://raw.githubusercontent.com/hermitdave/FrequencyWords/master/content/2018/"
+	url = url_base * lang * "/" * lang * "_50k.txt"
+	data = HTTP.request("GET", url).body
+	data = strip(String(data))
+	return data
+end
+
 function get_word_data(langs::Dict{String, Any})::Dict{String, Float64}
 	datax = Dict{String, Float64}()
 	for (lang, weight) in langs
 		weight == 0.0 && continue
 		data_per_lang = Dict{String, Float64}()
 		freq_total::UInt = 0
-		url_base = "https://raw.githubusercontent.com/hermitdave/FrequencyWords/master/content/2018/"
-		url = url_base * lang * "/" * lang * "_50k.txt"
-		data = HTTP.request("GET", url).body
-		data = strip(String(data))
+		data = get_data(lang)
 		for line in split(data, "\n")
 			word, freq = split(line, ' ')
 			word = normalize(string(word), stripmark=true, casefold=true)
@@ -94,47 +101,74 @@ function ngrams_from_word(word, n)
 	return [view(word, i:i+n-1) for i = 1:length(word)-n+1]
 end
 
-function get_letter_data(word_freq_data::Dict{String, Float64}, settings)
-	letter_data = Dict{Char, Float64}()
-	for (word, freq) in word_freq_data
-		for letter in word  # todo
-			if letter in keys(letter_data)
-				letter_data[letter] += freq
-			else
-				letter_data[letter] = freq
-			end
-		end
-	end
-	freq_total = sum(values(letter_data))
-	letter_data = Dict(letter => freq / freq_total for (letter, freq) in letter_data)
-	return letter_data
+function normalize_dict!(dict)
+	value_total = sum(values(dict))
+	dict = Dict(key => value/value_total for (key, value) in dict)
+	return dict
 end
 
-function get_bigram_data(word_freq_data::Dict{String, Float64}, settings)
-	bigram_data = Dict{SubString, Float64}()
-	for (word, freq) in word_freq_data
-		length(word) < 2 && continue
-		for ngram in ngrams_from_word(word, 2)
-			if ngram in keys(bigram_data)
-				bigram_data[ngram] += freq
-			else
-				bigram_data[ngram] = freq
-			end
-		end
-	end
-	freq_total = sum(values(bigram_data))
-	bigram_data = Dict(ngram => freq / freq_total for (ngram, freq) in bigram_data)
-	aa = sort(collect(bigram_data), by=x->x[2], rev=true)
+function filter_dict!(dict, threshold)
+	sorted_pairs = sort(collect(dict), by=x->x[2], rev=true)
 	freq_total::Float64 = 0.0
-	for (i, thing) in enumerate(aa)
+	for (i, thing) in enumerate(sorted_pairs)
 		freq_total += thing[2]
-		if freq_total >= settings.bigram_quality
-			bigram_data = Dict(aa[1:i])
-			bigram_data = Dict(ngram => freq / freq_total for (ngram, freq) in bigram_data)
+		if freq_total >= threshold
+			dict = Dict(sorted_pairs[1:i])
 			break
 		end
 	end
-	return bigram_data
+	return dict
+end
+
+function get_letter_freqs(word_freq_data::Dict{String, Float64}, settings)
+	letter_freqs = Dict{Vector{Char}, Float64}()
+	for (word, freq) in word_freq_data
+		for letter in word  # todo
+			if [letter] in keys(letter_freqs)
+				letter_freqs[[letter]] += freq
+			else
+				letter_freqs[[letter]] = freq
+			end
+		end
+	end
+	normalize_dict!(letter_freqs)
+	return letter_freqs
+end
+
+function get_bigram_freqs(word_freq_data::Dict{String, Float64}, settings)
+	bigram_freqs = Dict{SubString, Float64}()
+	for (word, freq) in word_freq_data
+		length(word) < 2 && continue
+		for ngram in ngrams_from_word(word, 2)
+			if ngram in keys(bigram_freqs)
+				bigram_freqs[ngram] += freq
+			else
+				bigram_freqs[ngram] = freq
+			end
+		end
+	end
+	bigram_freqs = normalize_dict!(bigram_freqs)
+	bigram_freqs = filter_dict!(bigram_freqs, settings.ngram_quality)
+	bigram_freqs = normalize_dict!(bigram_freqs)
+	return bigram_freqs
+end
+
+function get_trigram_freqs(word_freq_data::Dict{String, Float64}, settings)
+	trigram_freqs = Dict{SubString, Float64}()
+	for (word, freq) in word_freq_data
+		length(word) < 3 && continue
+		for ngram in ngrams_from_word(word, 3)
+			if ngram in keys(trigram_freqs)
+				trigram_freqs[ngram] += freq
+			else
+				trigram_freqs[ngram] = freq
+			end
+		end
+	end
+	trigram_freqs = normalize_dict!(trigram_freqs)
+	trigram_freqs = filter_dict!(trigram_freqs, settings.ngram_quality)
+	trigram_freqs = normalize_dict!(trigram_freqs)
+	return trigram_freqs
 end
 
 function stroke_effort(key, settings)::Float64
@@ -144,17 +178,16 @@ function stroke_effort(key, settings)::Float64
 	return stroke_effort
 end
 
-function analyze_letter(char::SubString, char_key_dict, key_objects, settings)::Float64
-	key::Key = key_objects[char_key_dict[only(char)]]
+function analyze_letter(char, key_objects, settings)::Float64
+	key::Key = key_objects[char[1]]
 	return stroke_effort(key, settings)
 end
 
-function analyze_bigram(bigram::SubString, char_key_dict, key_objects, settings)::Float64
+function analyze_bigram(bigram, key_objects, settings)::Float64
 
-	# TODO precompute key-key pairs ?
-	key_1::Key = key_objects[char_key_dict[bigram[1]]]
-	key_2::Key = key_objects[char_key_dict[bigram[2]]]
-	
+	key_1::Key = key_objects[bigram[1]]
+	key_2::Key = key_objects[bigram[2]]
+
 	trans_effort::Float64 = 1.0
 	if key_1.hand == key_2.hand
 		finger_diff = key_2.finger - key_1.finger
@@ -171,24 +204,56 @@ function analyze_bigram(bigram::SubString, char_key_dict, key_objects, settings)
 	else
 		trans_effort /= settings.alter
 	end
-	trans_effort *= (stroke_effort(key_1, settings) + stroke_effort(key_2, settings)) * 0.5
 	return trans_effort
 end
 
-# TODO trigrams
+function analyze_trigram(trigram, key_objects, settings)::Float64
 
-function analyze_ngrams(ngram_data, analyze_ngram, char_key_dict, key_objects, settings, letters)::Float64
-	score::Float64 = 0.0
-	for (ngram, freq) in ngram_data
-		if issubset(collect(ngram), letters)
-			ngram_score = analyze_ngram(ngram, char_key_dict, key_objects, settings)
-			score += ngram_score * freq
+	# TODO precompute key-key pairs ?
+	key_1::Key = key_objects[trigram[1]]
+	key_2::Key = key_objects[trigram[2]]
+	key_3::Key = key_objects[trigram[3]]
+	
+	trans_effort::Float64 = 1.0
+	if key_1.hand == key_3.hand
+		if key_1.hand == key_2.hand
+			if (key_1.finger < key_2.finger > key_3.finger) || (key_1.finger > key_2.finger < key_3.finger)
+				trans_effort /= settings.redirs
+			end
+		else
+			# alteration
 		end
+		finger_diff = key_3.finger - key_1.finger
+		if finger_diff == 0
+			trans_effort /= settings.sfb
+		elseif finger_diff < 0
+			trans_effort /= settings.inroll
+		elseif finger_diff > 0
+			trans_effort /= settings.outroll
+		end
+		travel = 2.0 ^ (abs(key_1.row - key_2.row) * settings.row_change * 0.5)
+		trans_effort *= travel
+		trans_effort ^= 2.0 ^ (- finger_diff * settings.independence / 3.0)
+	else
+		trans_effort /= settings.alter
 	end
-	return score
+	return trans_effort
 end
 
-function get_finger_load(char_key_dict, letter_data, key_objects, settings)
+function evaluate_ngrams(ngram_freqs, ngram_efforts, char_key_dict, letters)::Float64
+	total_freq::Float64 = 0.0
+	total_score::Float64 = 0.0
+	for (ngram, freq) in ngram_freqs
+		!issubset(collect(ngram), letters) && continue
+		ngram_idx = [char_key_dict[ngram[n]] for n in 1:length(ngram)]
+		ngram_score = ngram_efforts[ngram_idx]*freq
+		total_freq += freq
+		total_score += ngram_score
+	end
+	return total_score/total_freq
+end
+
+function get_finger_load(char_key_dict, letter_data, key_objects, settings)::Float64
 
 	letter_data = sort(collect(letter_data), by=x->x[2], rev=true)
 	letter_data = Dict(letter_data[1:24])
@@ -202,14 +267,14 @@ function get_finger_load(char_key_dict, letter_data, key_objects, settings)
 		# TODO first normalize letter data
 		strength = settings.finger_strengths[key.finger]
 		sum_thingy = sum(1 ./ settings.finger_strengths)
-		f[finger_idx] += letter_data[char] / strength * sum_thingy
+		f[finger_idx] += letter_data[[char]] / strength * sum_thingy
 	end
 	b = settings.enforce_balance
 	f = 2^(b*sum(abs.(log2.(f)))/8)
 	return f
 end
 
-function how_hard_to_learn(char_key_dict, key_objects, settings, letter_data)
+function how_hard_to_learn(char_key_dict, key_objects, settings, letter_data)::Float64
 	
 	char_key_dict_ref = make_char_dict_ref(settings.ref_layout)
 	total::Float64 = 0.0
@@ -230,7 +295,7 @@ function how_hard_to_learn(char_key_dict, key_objects, settings, letter_data)
 
 		key_diff ^= settings.keep_familiar
 		
-		freq = letter_data[char]
+		freq = letter_data[[char]]
 		freq_total += freq
 		key_diff *= freq
 		total += key_diff
@@ -254,19 +319,24 @@ function get_char_array(key_objects, letter_data, settings)
 	return out
 end
 
-function analyze_layout(layout, letter_data, bigram_data, key_objects::Tuple, settings, letters)::Float64
+function analyze_layout(layout, ngram_freqs, ngram_efforts, key_objects::Tuple, settings)::Float64
+
+	letter_freqs, bigram_freqs, trigram_freqs = ngram_freqs
+	letter_efforts, bigram_efforts, trigram_efforts = ngram_efforts
 	
 	char_key_dict = make_char_dict(layout.layout_chars)
-	finger_load = get_finger_load(char_key_dict, letter_data, key_objects, settings)
+	finger_load = get_finger_load(char_key_dict, letter_freqs, key_objects, settings)
 	
-	# score_letters = analyze_ngrams(letter_data, analyze_letter, char_key_dict, key_objects, settings, letters)
-	score_bigrams = analyze_ngrams(bigram_data, analyze_bigram, char_key_dict, key_objects, settings, letters)
-	difficulty = how_hard_to_learn(char_key_dict, key_objects, settings, letter_data)
+	letters = layout.layout_chars
 
-	score::Float64 = score_bigrams * finger_load * difficulty
+	letter_score = evaluate_ngrams(letter_freqs, letter_efforts, char_key_dict, letters)
+	bigram_score = evaluate_ngrams(bigram_freqs, bigram_efforts, char_key_dict, letters)
+	trigram_score = evaluate_ngrams(trigram_freqs, trigram_efforts, char_key_dict, letters)
 
+	difficulty = how_hard_to_learn(char_key_dict, key_objects, settings, letter_freqs)
+
+	score::Float64 = (letter_score + bigram_score + trigram_score) * finger_load * difficulty / 3
 	layout.score = score
-	# layout.finger_load = finger_load
 	return score
 end
 
@@ -298,26 +368,61 @@ function optimize_layout(settings)
 		Key(true,  3, 3),
 		Key(true,  4, 3)
 	)
+		
+	letter_efforts = Dict()
+	for i in 1:24
+		letter = [i]
+		score = analyze_letter(letter, key_objects, settings)
+		letter in keys(letter_efforts) && continue
+		letter_efforts[letter] = score
+	end
+	
+	bigram_efforts = Dict()
+	for i in 1:24
+		for j in 1:24
+			bigram = [i, j]
+			score = analyze_bigram(bigram, key_objects, settings)
+			bigram in keys(bigram_efforts) && continue
+			bigram_efforts[bigram] = score
+		end
+	end
+	
+	trigram_efforts = Dict()
+	for i in 1:24
+		for j in 1:24
+			for k in 1:24
+				trigram = [i, j, k]
+				score = analyze_trigram(trigram, key_objects, settings)
+				trigram in keys(trigram_efforts) && continue
+				trigram_efforts[trigram] = score
+			end
+		end
+	end
+
+	ngram_efforts = (letter_efforts, bigram_efforts, trigram_efforts)
 
 	word_data = get_word_data(settings.langs)
-	letter_data = get_letter_data(word_data, settings)
-	bigram_data = get_bigram_data(word_data, settings)
+	letter_freqs = get_letter_freqs(word_data, settings)
+	bigram_freqs = get_bigram_freqs(word_data, settings)
+	trigram_freqs = get_trigram_freqs(word_data, settings)
+	ngram_freqs = (letter_freqs, bigram_freqs, trigram_freqs)
 
-	letters = get_char_array(key_objects, letter_data, settings)  # TODO clean up data so it doesnt contain unused chars?
+	# letters = get_char_array(key_objects, letter_data, settings)  # TODO clean up data so it doesnt contain unused chars?
 
 	# layout = Layout(letters, Inf, Vector{Float64}(undef, 8))
 	layouts = []
 	for _ in 1:settings.initial_states
-		chars = get_char_array(key_objects, letter_data, settings)
+		chars = get_char_array(key_objects, letter_freqs, settings)
 		layout = Layout(chars, Inf, Vector{Float64}(undef, 8))
 		normalize_vowels!(layout, settings.vowel_side)
-		analyze_layout(layout, letter_data, bigram_data, key_objects, settings, letters)
+		analyze_layout(layout, ngram_freqs, ngram_efforts, key_objects, settings)
 		push!(layouts, layout)
 	end
 	sort!(layouts, by=layout->layout.score, rev=false)
-	# layouts = [layout]
+	count = 0
 	last_best_layout = layouts[1]
 	iter = settings.iterations
+	t = time()
 	for i in 1:iter
 		layouts_copy = deepcopy(layouts)
 		for layout in layouts_copy
@@ -326,29 +431,28 @@ function optimize_layout(settings)
 				tmp_layout = deepcopy(layout)
 				swap_keys!(tmp_layout)
 				normalize_vowels!(tmp_layout, settings.vowel_side)
-				# mirror!(tmp_layout)  # TODO 
 				layout.layout_chars == tmp_layout.layout_chars && continue
-				analyze_layout(tmp_layout, letter_data, bigram_data, key_objects, settings, letters)
+				analyze_layout(tmp_layout, ngram_freqs, ngram_efforts, key_objects, settings)
+				count += 1
 				push!(new_layouts, tmp_layout)
 			end
 			sort!(new_layouts, by=layout->layout.score, rev=false)
-			new_layouts = discard_bad_layouts!(new_layouts, 64.0, 4.0)
+			new_layouts = discard_bad_layouts!(new_layouts, 16.0, 4.0)
 			append!(layouts, new_layouts)
 		end
 		sort!(layouts, by=layout->layout.score, rev=false)
-		layouts = discard_bad_layouts!(layouts, 256.0, 4.0)
+		layouts = discard_bad_layouts!(layouts, 64.0, 4.0)
 		best_layout_so_far = layouts[1]
 		if best_layout_so_far.layout_chars != last_best_layout.layout_chars
 			println("$i / $iter")
 			print_layout(best_layout_so_far)
-			println(round(best_layout_so_far.score, digits=3))
+			score = round(best_layout_so_far.score, digits=3)
+			println("Score: $score")
 			print("\n")
-			# p = plot(best_layout_so_far.finger_load)
-			# gui(p)
-			# best_layout_so_far.print_stats()
 		end
 		last_best_layout = best_layout_so_far
 	end
-	# print_layout.(layouts)
-	# print("yes")
+	speed = round(Int, count/(time()-t))
+	println("Speed: $speed layouts/s")
+	print("\n")
 end

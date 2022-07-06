@@ -39,8 +39,12 @@ function swap_keys!(layout::Layout)
 	end
 end
 
+function mirror_index(x::Int64)::Int64
+	return ((x - 1) ÷ 8) * 8 + 8 - (x - 1) % 8
+end
+
 function mirror_chars(chars)
-	perm = [((a - 1) ÷ 8) * 8 + 8 - (a - 1) % 8 for a in 1:24]
+	perm = [mirror_index(x) for x in 1:24]
 	return chars[perm]
 end
 
@@ -251,6 +255,9 @@ function evaluate_ngrams(ngram_freqs, ngram_efforts, char_key_dict)::Float64
 	for (ngram, freq) in ngram_freqs
 		!issubset(collect(ngram), letters) && continue
 		ngram_idx = [char_key_dict[ngram[n]] for n in 1:length(ngram)]
+		# if !(char_key_dict[ngram[1]] in [1:4; 9:12; 17:20])
+		# 	ngram_idx = [mirror_index(idx) for idx in ngram_idx]
+		# end
 		ngram_score = ngram_efforts[ngram_idx]*freq
 		total_freq += freq
 		total_score += ngram_score
@@ -362,9 +369,11 @@ function get_ngram_efforts(key_objects, settings)
 	end
 	trigram_efforts = Dict{Vector{Int64}, Float64}()
 	for i in 1:24
+	# for i in [1:4; 9:12; 17:20]
 		for j in 1:24
 			for k in 1:24
 				trigram = [i, j, k]
+				# ((a - 1) ÷ 8) * 8 + 8 - (a - 1) % 8
 				score = analyze_trigram(trigram, key_objects, settings)
 				trigram in keys(trigram_efforts) && continue
 				trigram_efforts[trigram] = score

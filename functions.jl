@@ -245,20 +245,59 @@ function analyze_trigram(trigram, key_objects, settings)::Float64
 	else
 		trans_effort /= settings.alter
 	end
-	return 1.0
+	return 1.0  # TODO
 end
 
-function evaluate_ngrams(ngram_freqs, ngram_efforts, char_key_dict)::Float64
+# function evaluate_ngrams(ngram_freqs, ngram_efforts, char_key_dict)::Float64
+# 	total_freq::Float64 = 0.0
+# 	total_score::Float64 = 0.0
+# 	letters = [char for (char, _) in char_key_dict]
+# 	for (ngram, freq) in ngram_freqs
+# 		!issubset(collect(ngram), letters) && continue
+# 		ngram_idx = [char_key_dict[ngram[n]] for n in 1:length(ngram)]
+# 		# if !(char_key_dict[ngram[1]] in [1:4; 9:12; 17:20])
+# 		# 	ngram_idx = [mirror_index(idx) for idx in ngram_idx]
+# 		# end
+# 		ngram_score = ngram_efforts[ngram_idx...]*freq
+# 		total_freq += freq
+# 		total_score += ngram_score
+# 	end
+# 	return total_score/total_freq
+# end
+
+function evaluate_letters(letter_freqs, letter_efforts, char_key_dict, letters)::Float64
 	total_freq::Float64 = 0.0
 	total_score::Float64 = 0.0
-	letters = [char for (char, _) in char_key_dict]
-	for (ngram, freq) in ngram_freqs
+	# letters = [char for char in keys(char_key_dict)]
+	for (ngram, freq) in letter_freqs
+		!(ngram[1] in letters) && continue
+		ngram_score = letter_efforts[char_key_dict[ngram[1]]]*freq
+		total_freq += freq
+		total_score += ngram_score
+	end
+	return total_score/total_freq
+end
+
+function evaluate_bigrams(bigram_freqs, bigram_efforts, char_key_dict, letters)::Float64
+	total_freq::Float64 = 0.0
+	total_score::Float64 = 0.0
+	# letters = [char for char in keys(char_key_dict)]
+	for (ngram, freq) in bigram_freqs
 		!issubset(collect(ngram), letters) && continue
-		ngram_idx = [char_key_dict[ngram[n]] for n in 1:length(ngram)]
-		# if !(char_key_dict[ngram[1]] in [1:4; 9:12; 17:20])
-		# 	ngram_idx = [mirror_index(idx) for idx in ngram_idx]
-		# end
-		ngram_score = ngram_efforts[ngram_idx]*freq
+		ngram_score = bigram_efforts[char_key_dict[ngram[1]], char_key_dict[ngram[2]]]*freq
+		total_freq += freq
+		total_score += ngram_score
+	end
+	return total_score/total_freq
+end
+
+function evaluate_trigrams(trigram_freqs, trigram_efforts, char_key_dict, letters)::Float64
+	total_freq::Float64 = 0.0
+	total_score::Float64 = 0.0
+	# letters = [char for char in keys(char_key_dict)]
+	for (ngram, freq) in trigram_freqs
+		!issubset(collect(ngram), letters) && continue
+		ngram_score = trigram_efforts[char_key_dict[ngram[1]], char_key_dict[ngram[2]], char_key_dict[ngram[3]]]*freq
 		total_freq += freq
 		total_score += ngram_score
 	end
@@ -331,52 +370,30 @@ function get_char_array(key_objects, letter_data, settings)
 	return out
 end
 
-function analyze_layout(layout, ngram_freqs, ngram_efforts, key_objects::Tuple, settings)::Float64
-
-	letter_freqs, bigram_freqs, trigram_freqs = ngram_freqs
-	letter_efforts, bigram_efforts, trigram_efforts = ngram_efforts
-	
-	char_key_dict = make_char_dict(layout.layout_chars)
-	finger_load = get_finger_load(char_key_dict, letter_freqs, key_objects, settings)
-	
-	letter_score = evaluate_ngrams(letter_freqs, letter_efforts, char_key_dict)
-	bigram_score = evaluate_ngrams(bigram_freqs, bigram_efforts, char_key_dict)
-	trigram_score = evaluate_ngrams(trigram_freqs, trigram_efforts, char_key_dict)
-
-	difficulty = how_hard_to_learn(char_key_dict, key_objects, settings, letter_freqs)
-
-	score::Float64 = (letter_score + bigram_score + trigram_score) * finger_load * difficulty / 3
-	layout.score = score
-	return score
-end
-
 function get_ngram_efforts(key_objects, settings)
-	letter_efforts = Dict{Vector{Int64}, Float64}()
+	letter_efforts = zeros(Float64, 24)
 	for i in 1:24
 		letter = [i]
 		score = analyze_letter(letter, key_objects, settings)
-		letter in keys(letter_efforts) && continue
-		letter_efforts[letter] = score
+		letter_efforts[i] = score
 	end
-	bigram_efforts = Dict{Vector{Int64}, Float64}()
+	bigram_efforts = zeros(Float64, 24, 24)
 	for i in 1:24
 		for j in 1:24
 			bigram = [i, j]
 			score = analyze_bigram(bigram, key_objects, settings)
-			bigram in keys(bigram_efforts) && continue
-			bigram_efforts[bigram] = score
+			bigram_efforts[i, j] = score
 		end
 	end
-	trigram_efforts = Dict{Vector{Int64}, Float64}()
+	trigram_efforts = zeros(Float64, 24, 24, 24)
+	# trigram_efforts = [analyze_trigram([i, j, k], key_objects, settings) for i in 1:24, j in 1:24, k in 1:24]
 	for i in 1:24
 	# for i in [1:4; 9:12; 17:20]
 		for j in 1:24
 			for k in 1:24
 				trigram = [i, j, k]
-				# ((a - 1) ÷ 8) * 8 + 8 - (a - 1) % 8
 				score = analyze_trigram(trigram, key_objects, settings)
-				trigram in keys(trigram_efforts) && continue
-				trigram_efforts[trigram] = score
+				trigram_efforts[i, j, k] = score
 			end
 		end
 	end
@@ -391,6 +408,27 @@ function get_ngram_freqs(settings)
 	trigram_freqs = get_trigram_freqs(word_data, settings)
 	ngram_freqs = (letter_freqs, bigram_freqs, trigram_freqs)
 	return ngram_freqs
+end
+
+function analyze_layout(layout, ngram_freqs, ngram_efforts, key_objects::Tuple, settings)::Float64
+
+	letter_freqs, bigram_freqs, trigram_freqs = ngram_freqs
+	letter_efforts, bigram_efforts, trigram_efforts = ngram_efforts
+	
+	char_key_dict = make_char_dict(layout.layout_chars)
+	finger_load = get_finger_load(char_key_dict, letter_freqs, key_objects, settings)
+	
+	letters = [char for char in keys(char_key_dict)]
+
+	letter_score = evaluate_letters(letter_freqs, letter_efforts, char_key_dict, letters)
+	bigram_score = evaluate_bigrams(bigram_freqs, bigram_efforts, char_key_dict, letters)
+	trigram_score = evaluate_trigrams(trigram_freqs, trigram_efforts, char_key_dict, letters)
+
+	difficulty = how_hard_to_learn(char_key_dict, key_objects, settings, letter_freqs)
+
+	score::Float64 = (letter_score + bigram_score + trigram_score) * finger_load * difficulty / 3
+	layout.score = score
+	return score
 end
 
 # TODO mirrored ngrams to reduce lookup

@@ -1,3 +1,8 @@
+iterations = 4
+initial_states = 16
+bigram_quality = 0.99  # 1.0 will be the most accurate at the cost of speed
+trigram_quality = 0.9  # 1.0 will be the most accurate at the cost of speed
+
 langs.en = 1.0
 langs.cs = 0.0
 
@@ -24,8 +29,3 @@ q w f p   l u y -
 a r s t   n e i o
 z x c d   h - - -
 """
-
-iterations = 4
-initial_states = 16
-bigram_quality = 0.99  # 1.0 will be the most accurate at the cost of speed
-trigram_quality = 0.9  # 1.0 will be the most accurate at the cost of speed

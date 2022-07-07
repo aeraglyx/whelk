@@ -1,23 +1,21 @@
 # Whelk
 
-Just a little 8x3 keyboard layout generator based on user preferences. Still WIP. 
+8x3 keyboard layout generator based on user preferences. Still WIP. 
 
-Initial layout the program found (not final):
+One of the layouts found (not final):
 ```
-b f r m  u o p j
-w s n t  i e h g
-v c l d  y a k z
+v m l d  g i p x
+c r n s  a e t o
+w k h f  y u b j
 ```
 
 ## Goal
 
-The initial push for creating this was that after learning Colemak DH and getting into ergonomic keyboards I wanted to ditch the inner columns completely. So I needed a Colemak-y 24 key layout. Also it's a way for me to learn Julia and make something potentially useful.
+After learning Colemak DH and getting into ergonomic keyboards I wanted to ditch the inner columns completely. So I needed a Colemak-y 24 key layout. Another inspiration was Ben Vallack's quest to reduce number of keys. Also it's a way for me to learn Julia and make something potentially useful.
 
 ## Why 8x3
 
-There's a certain simplicity and elegance to it. Lateral motion is bad, #1DFH (one distance from home) is good. If we don't count thumbs, that gives us 24 keys.
-
-Even on 34 or 36 key layouts such as Ferris Sweep or GergoPlex there are 6 "bad" keys (inner columns) and usually 4 punctuation marks in the main zone. If we try to keep only alphas on the main block, 2 low frequency letters won't fit and will have to be on a different layer. Here's what I'm working with:
+There's a certain simplicity and elegance to it. #1DFH (one distance from home) is good, lateral motion is bad. If we don't count thumbs, that gives us 24 keys. If we try to keep only alphas on the main block, 2 low frequency letters won't fit and will have to be on a different layer. Here's the form factor I'm working with:
 ```
 □ □ □ □       □ □ □ □
 ■ ■ ■ ■       ■ ■ ■ ■

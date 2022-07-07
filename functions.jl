@@ -197,23 +197,24 @@ function analyze_bigram(bigram, key_objects, settings)::Float64
 	key_1::Key = key_objects[bigram[1]]
 	key_2::Key = key_objects[bigram[2]]
 
-	trans_effort::Float64 = 1.0
+	effort::Float64 = 1.0
 	if key_1.hand == key_2.hand
 		finger_diff = key_2.finger - key_1.finger
 		if finger_diff == 0
-			trans_effort /= settings.sfb
+			effort /= settings.sfb
 		elseif finger_diff < 0
-			trans_effort /= settings.inroll
+			effort /= settings.inroll
 		elseif finger_diff > 0
-			trans_effort /= settings.outroll
+			effort /= settings.outroll
 		end
 		travel = 2.0 ^ (abs(key_1.row - key_2.row) * settings.row_change * 0.5)
-		trans_effort *= travel
-		trans_effort ^= 2.0 ^ (- finger_diff * settings.independence / 3.0)
+		effort *= travel
+		effort ^= 2.0 ^ (- finger_diff * settings.independence / 3.0)
 	else
-		trans_effort /= settings.alter
+		effort /= settings.alter
 	end
-	return trans_effort
+	effort *= (stroke_effort(key_1, settings) + stroke_effort(key_2, settings))/2
+	return effort
 end
 
 function analyze_trigram(trigram, key_objects, settings)::Float64
@@ -221,49 +222,50 @@ function analyze_trigram(trigram, key_objects, settings)::Float64
 	key_1::Key = key_objects[trigram[1]]
 	key_2::Key = key_objects[trigram[2]]
 	key_3::Key = key_objects[trigram[3]]
+
+	h1, h2, h3 = key_1.hand, key_2.hand, key_3.hand
+	f1, f2, f3 = key_1.finger, key_2.finger, key_3.finger
+	r1, r2, r3 = key_1.row, key_2.row, key_3.row
 	
-	trans_effort::Float64 = 1.0
-	if key_1.hand == key_3.hand
-		if key_1.hand == key_2.hand
-			if (key_1.finger < key_2.finger > key_3.finger) || (key_1.finger > key_2.finger < key_3.finger)
-				trans_effort /= settings.redirs
+	effort::Float64 = 1.0
+
+	y12 = 2.0 ^ (abs(r1 - r2) * settings.row_change * 0.5)
+	y23 = 2.0 ^ (abs(r2 - r3) * settings.row_change * 0.5)
+	y13 = 2.0 ^ (abs(r1 - r3) * settings.row_change * 0.5)
+
+	x12 = f2 - f1
+	x12 = f3 - f2
+
+	if h1 == h3
+		if h1 == h2
+			# all same hand
+			if (f1 < f2 < f3)
+				effort /= settings.inroll
+			elseif (f1 > f2 > f3)
+				effort /= settings.outroll
+			elseif (f1 < f2 > f3) || (f1 > f2 < f3)
+				effort /= settings.redirs
 			end
 		else
-			# alteration
+			effort /= settings.alter
 		end
-		finger_diff = key_3.finger - key_1.finger
-		if finger_diff == 0
-			trans_effort /= settings.sfb
-		elseif finger_diff < 0
-			trans_effort /= settings.inroll
-		elseif finger_diff > 0
-			trans_effort /= settings.outroll
+		if f1 == f3
+			effort /= settings.dsfb
 		end
-		travel = 2.0 ^ (abs(key_1.row - key_2.row) * settings.row_change * 0.5)
-		trans_effort *= travel
-		trans_effort ^= 2.0 ^ (- finger_diff * settings.independence / 3.0)
 	else
-		trans_effort /= settings.alter
+		# 1-2 or 2-1
+		effort /= settings.sth  # TODO
 	end
-	return 1.0  # TODO
+	# finger_diff = key_3.finger - key_1.finger
+	# travel = 2.0 ^ (abs(key_1.row - key_2.row) * settings.row_change * 0.5)
+	# effort *= travel
+	# effort ^= 2.0 ^ (- finger_diff * settings.independence / 3.0)
+	# effort *= (stroke_effort(key_1, settings), stroke_effort(key_2, settings), stroke_effort(key_3, settings))/3
+	bigram_1 = analyze_bigram(trigram[1:2], key_objects, settings)
+	bigram_2 = analyze_bigram(trigram[2:3], key_objects, settings)
+	effort *= (bigram_1 + bigram_2)/2
+	return effort
 end
-
-# function evaluate_ngrams(ngram_freqs, ngram_efforts, char_key_dict)::Float64
-# 	total_freq::Float64 = 0.0
-# 	total_score::Float64 = 0.0
-# 	letters = [char for (char, _) in char_key_dict]
-# 	for (ngram, freq) in ngram_freqs
-# 		!issubset(collect(ngram), letters) && continue
-# 		ngram_idx = [char_key_dict[ngram[n]] for n in 1:length(ngram)]
-# 		# if !(char_key_dict[ngram[1]] in [1:4; 9:12; 17:20])
-# 		# 	ngram_idx = [mirror_index(idx) for idx in ngram_idx]
-# 		# end
-# 		ngram_score = ngram_efforts[ngram_idx...]*freq
-# 		total_freq += freq
-# 		total_score += ngram_score
-# 	end
-# 	return total_score/total_freq
-# end
 
 function evaluate_letters(letter_freqs, letter_efforts, char_key_dict, letters)::Float64
 	total_freq::Float64 = 0.0
@@ -474,9 +476,9 @@ function optimize_layout(settings)
 		push!(layouts, layout)
 	end
 	sort!(layouts, by=layout->layout.score, rev=false)
-	count = 0
 	last_best_layout = layouts[1]
 	iter = settings.iterations
+	count = 0
 	t = time()
 	for i in 1:iter
 		layouts_copy = deepcopy(layouts)

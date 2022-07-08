@@ -3,18 +3,18 @@ initial_states = 16
 bigram_quality = 0.99  # 1.0 will be the most accurate at the cost of speed
 trigram_quality = 0.9  # 1.0 will be the most accurate at the cost of speed
 
-langs.en = 0.7
-langs.cs = 0.3
+langs.en = 1.0
+langs.cs = 0.0
 
 finger_strengths = [0.8, 1.0, 0.7, 0.4]  # index to pinkie
 
 # stats
-sfb = 0.5  # same finger bigrams
-dsfb = 0.75  # disjointed same finger bigrams
+sfb = 0.2  # same finger bigrams
+dsfb = 0.5  # disjointed same finger bigrams
 inroll = 1.3  # inward rolls
 outroll = 0.9  # outward rolls
 alter = 1.4  # hand alteration, above 1.0 for more alteration
-redirs = 0.8  # redirects (like "est" on qwerty)
+redirs = 0.7  # redirects (like "est" on qwerty)
 sth = 1.5  # two letters one hand, one on the other or vice versa
 
 home_row = 1.2  # high value enforces the most frequent chars on home row
@@ -23,7 +23,7 @@ row_change = 0.8
 independence = 1.0  # makes close-by bigrams more significant
 
 # misc
-enforce_balance = 1.8
+enforce_balance = 1.0
 vowel_side = true  # false for left, true for right
 keep_familiar = 0.0  # 0 has no effect, high value for fewer changes
 ref_layout = """

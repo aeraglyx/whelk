@@ -190,6 +190,10 @@ function get_trigram_freqs(word_freq_data::Dict{String, Float64}, letters, setti
 	return trigram_freqs
 end
 
+function strength(x::Float64, independence::Float64)::Float64
+	return 2.0 ^ (- x * independence)
+end
+
 function stroke_effort(key, settings)::Float64
 	stroke_effort::Float64 = 1.0 / settings.finger_strengths[key.finger]
 	key.row != 2 && (stroke_effort *= 2.0 ^ settings.home_row)
@@ -200,10 +204,6 @@ end
 function analyze_letter(char, key_objects, settings)::Float64
 	key::Key = key_objects[char[1]]
 	return stroke_effort(key, settings)
-end
-
-function strength(x::Float64, independence::Float64)::Float64
-	return 2.0 ^ (- x * independence)
 end
 
 function analyze_bigram(bigram, key_objects, settings)::Float64
@@ -237,7 +237,7 @@ function analyze_trigram(trigram, key_objects, settings)::Float64
 	
 	bigram_1 = analyze_bigram(trigram[1:2], key_objects, settings)
 	bigram_2 = analyze_bigram(trigram[2:3], key_objects, settings)
-	effort::Float64 = (bigram_1 + bigram_2) / 2
+	effort::Float64 = (bigram_1 + bigram_2) / 2  # XXX this emphasizes the middle stroke
 
 	if key_1.hand == key_3.hand
 		effort *= settings.dsfb ^ (- abs(y13) * strength(abs(x13), settings.independence))

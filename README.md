@@ -4,9 +4,9 @@
 
 One of the layouts found (not final):
 ```
-v m l d  g i p x
-c r n s  a e t o
-w k h f  y u b j
+v g n d  o u h w
+c s r t  a e i l
+f m p b  x y k j
 ```
 
 ## Goal

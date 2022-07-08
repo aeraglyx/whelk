@@ -192,28 +192,27 @@ function analyze_letter(char, key_objects, settings)::Float64
 	return stroke_effort(key, settings)
 end
 
+function strength(x, independence)
+	return 2.0 ^ (- x * independence)
+end
+
 function analyze_bigram(bigram, key_objects, settings)::Float64
 
 	key_1::Key = key_objects[bigram[1]]
 	key_2::Key = key_objects[bigram[2]]
 
-	effort::Float64 = 1.0
+	effort::Float64 = (stroke_effort(key_1, settings) + stroke_effort(key_2, settings)) / 2
+
 	if key_1.hand == key_2.hand
-		finger_diff = key_2.finger - key_1.finger
-		if finger_diff == 0
-			effort /= settings.sfb
-		elseif finger_diff < 0
-			effort /= settings.inroll
-		elseif finger_diff > 0
-			effort /= settings.outroll
-		end
-		travel = 2.0 ^ (abs(key_1.row - key_2.row) * settings.row_change * 0.5)
-		effort *= travel
-		effort ^= 2.0 ^ (- finger_diff * settings.independence / 3.0)
+		x = key_2.finger - key_1.finger
+		y = key_2.row - key_1.row
+		effort *= settings.sfb ^ (- abs(y) * strength(abs(x), settings.independence))
+		x < 0 && (effort /= settings.inroll ^ strength(abs(x) - 1, 0.5))
+		x > 0 && (effort /= settings.outroll ^ strength(abs(x) - 1, 0.5))
 	else
 		effort /= settings.alter
 	end
-	effort *= (stroke_effort(key_1, settings) + stroke_effort(key_2, settings))/2
+
 	return effort
 end
 
@@ -222,88 +221,62 @@ function analyze_trigram(trigram, key_objects, settings)::Float64
 	key_1::Key = key_objects[trigram[1]]
 	key_2::Key = key_objects[trigram[2]]
 	key_3::Key = key_objects[trigram[3]]
-
-	h1, h2, h3 = key_1.hand, key_2.hand, key_3.hand
-	f1, f2, f3 = key_1.finger, key_2.finger, key_3.finger
-	r1, r2, r3 = key_1.row, key_2.row, key_3.row
 	
-	effort::Float64 = 1.0
-
-	y12 = 2.0 ^ (abs(r1 - r2) * settings.row_change * 0.5)
-	y23 = 2.0 ^ (abs(r2 - r3) * settings.row_change * 0.5)
-	y13 = 2.0 ^ (abs(r1 - r3) * settings.row_change * 0.5)
-
-	x12 = f2 - f1
-	x12 = f3 - f2
-
-	if h1 == h3
-		if h1 == h2
-			# all same hand
-			if (f1 < f2 < f3)
-				effort /= settings.inroll
-			elseif (f1 > f2 > f3)
-				effort /= settings.outroll
-			elseif (f1 < f2 > f3) || (f1 > f2 < f3)
-				effort /= settings.redirs
-			end
-		else
-			effort /= settings.alter
-		end
-		if f1 == f3
-			effort /= settings.dsfb
-		end
-	else
-		# 1-2 or 2-1
-		effort /= settings.sth  # TODO
-	end
-	# finger_diff = key_3.finger - key_1.finger
-	# travel = 2.0 ^ (abs(key_1.row - key_2.row) * settings.row_change * 0.5)
-	# effort *= travel
-	# effort ^= 2.0 ^ (- finger_diff * settings.independence / 3.0)
-	# effort *= (stroke_effort(key_1, settings), stroke_effort(key_2, settings), stroke_effort(key_3, settings))/3
+	x13 = key_3.finger - key_1.finger
+	y13 = key_3.row - key_1.row
+	
 	bigram_1 = analyze_bigram(trigram[1:2], key_objects, settings)
 	bigram_2 = analyze_bigram(trigram[2:3], key_objects, settings)
-	effort *= (bigram_1 + bigram_2)/2
+	effort::Float64 = (bigram_1 + bigram_2) / 2
+
+	if key_1.hand == key_3.hand
+		effort *= settings.dsfb ^ (- abs(y13) * strength(abs(x13), settings.independence))
+		if key_1.hand == key_2.hand
+			if (key_1.finger < key_2.finger > key_3.finger) || (key_1.finger > key_2.finger < key_3.finger)
+				effort /= settings.redirs
+			end
+		end
+	else
+		effort /= settings.sth
+	end
+
 	return effort
 end
 
 function evaluate_letters(letter_freqs, letter_efforts, char_key_dict, letters)::Float64
 	total_freq::Float64 = 0.0
 	total_score::Float64 = 0.0
-	# letters = [char for char in keys(char_key_dict)]
 	for (ngram, freq) in letter_freqs
 		!(ngram[1] in letters) && continue
 		ngram_score = letter_efforts[char_key_dict[ngram[1]]]*freq
 		total_freq += freq
 		total_score += ngram_score
 	end
-	return total_score/total_freq
+	return total_score / total_freq
 end
 
 function evaluate_bigrams(bigram_freqs, bigram_efforts, char_key_dict, letters)::Float64
 	total_freq::Float64 = 0.0
 	total_score::Float64 = 0.0
-	# letters = [char for char in keys(char_key_dict)]
 	for (ngram, freq) in bigram_freqs
 		!issubset(collect(ngram), letters) && continue
 		ngram_score = bigram_efforts[char_key_dict[ngram[1]], char_key_dict[ngram[2]]]*freq
 		total_freq += freq
 		total_score += ngram_score
 	end
-	return total_score/total_freq
+	return total_score / total_freq
 end
 
 function evaluate_trigrams(trigram_freqs, trigram_efforts, char_key_dict, letters)::Float64
 	total_freq::Float64 = 0.0
 	total_score::Float64 = 0.0
-	# letters = [char for char in keys(char_key_dict)]
 	for (ngram, freq) in trigram_freqs
 		!issubset(collect(ngram), letters) && continue
 		ngram_score = trigram_efforts[char_key_dict[ngram[1]], char_key_dict[ngram[2]], char_key_dict[ngram[3]]]*freq
 		total_freq += freq
 		total_score += ngram_score
 	end
-	return total_score/total_freq
+	return total_score / total_freq
 end
 
 function get_finger_load(char_key_dict, letter_data, key_objects, settings)::Float64

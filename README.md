@@ -1,6 +1,6 @@
 # Whelk
 
-8x3 keyboard layout generator based on user preferences. Still WIP. 
+A relatively fast 8x3 keyboard layout generator based on user preferences. Still WIP. 
 
 One of the layouts found (not final):
 ```
@@ -26,7 +26,7 @@ There's a certain simplicity and elegance to it. #1DFH (one distance from home) 
 ## How to generate your own layout
 
 - Clone the repository
-- (install Julia)
+- Install Julia
 - Edit `config.toml`
 - Run `main.jl`
 

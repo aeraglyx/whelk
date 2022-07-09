@@ -45,7 +45,7 @@ function swap_keys!(layout::Layout)
 	# TODO swap vowels only on one hand
 end
 
-function mirror_index(x::UInt8)::UInt8
+function mirror_index(x::Int)::Int
 	return ((x - 1) ÷ 8) * 8 + 8 - (x - 1) % 8
 end
 
@@ -190,14 +190,14 @@ function get_trigram_freqs(word_freq_data::Dict{String, Float64}, letters, setti
 	return trigram_freqs
 end
 
-function strength(x::Float64, independence::Float64)::Float64
-	return 2.0 ^ (- x * independence)
+function strength(x, independence::Float64)::Float64
+	return 2.0 ^ (- float(x) * independence)
 end
 
 function stroke_effort(key, settings)::Float64
 	stroke_effort::Float64 = 1.0 / settings.finger_strengths[key.finger]
-	key.row != 2 && (stroke_effort *= 2.0 ^ settings.home_row)
-	stroke_effort *= 2.0 ^ ((key.row - 2.0) * settings.prefer_top_row)
+	# key.row != 2 && (stroke_effort *= 2.0 ^ settings.home_row)
+	# stroke_effort *= 2.0 ^ ((key.row - 2.0) * settings.prefer_top_row)
 	return stroke_effort
 end
 
@@ -211,7 +211,7 @@ function analyze_bigram(bigram, key_objects, settings)::Float64
 	key_1::Key = key_objects[bigram[1]]
 	key_2::Key = key_objects[bigram[2]]
 
-	effort::Float64 = (stroke_effort(key_1, settings) + stroke_effort(key_2, settings)) / 2
+	effort::Float64 = (stroke_effort(key_1, settings) + stroke_effort(key_2, settings)) / 2.0
 
 	if key_1.hand == key_2.hand
 		x = key_2.finger - key_1.finger
@@ -235,10 +235,12 @@ function analyze_trigram(trigram, key_objects, settings)::Float64
 	x13 = key_3.finger - key_1.finger
 	y13 = key_3.row - key_1.row
 	
-	bigram_1 = analyze_bigram(trigram[1:2], key_objects, settings)
-	bigram_2 = analyze_bigram(trigram[2:3], key_objects, settings)
-	effort::Float64 = (bigram_1 + bigram_2) / 2  # XXX this emphasizes the middle stroke
-
+	# bigram_1 = analyze_bigram(trigram[1:2], key_objects, settings)
+	# bigram_2 = analyze_bigram(trigram[2:3], key_objects, settings)
+	# effort::Float64 = (bigram_1 + bigram_2) / 2  # XXX this emphasizes the middle stroke
+	effort::Float64 = (stroke_effort(key_1, settings) + stroke_effort(key_2, settings) + stroke_effort(key_2, settings)) / 3.0
+	
+	
 	if key_1.hand == key_3.hand
 		effort *= settings.dsfb ^ (- abs(y13) * strength(abs(x13), settings.independence))
 		if key_1.hand == key_2.hand

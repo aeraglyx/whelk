@@ -423,6 +423,29 @@ end
 
 # TODO mirrored ngrams to reduce lookup
 
+function inspect_layout(layout::Layout, key_objects, letter_freqs, settings)
+	char_key_dict = make_char_dict(layout.layout_chars)
+	finger_usage = zeros(Float64, 8)
+	for char in layout.layout_chars
+		key::Key = key_objects[char_key_dict[char][1]]
+		i = key.finger
+		if key.hand
+			i = 4 + i
+		else
+			i = 5 - i
+		end
+		finger_usage[i] += letter_freqs[[char]]
+	end
+
+	for (i, finger) in enumerate(finger_usage)
+		print(string(Int(round(100 * finger)), pad=2), " ")
+		if i == 4
+			print(" ")
+		end
+	end
+	println("")
+end
+
 function optimize_layout(settings)
 
 	key_objects = (
@@ -491,8 +514,9 @@ function optimize_layout(settings)
 		if best_layout_so_far.layout_chars != last_best_layout.layout_chars
 			println("$i / $iter")
 			print_layout(best_layout_so_far)
-			score = round(best_layout_so_far.score, digits=3)
-			println("Score: $score")
+			# score = round(best_layout_so_far.score, digits=3)
+			# println("Score: $score")
+			inspect_layout(best_layout_so_far, key_objects, ngram_freqs[1], settings)
 			print("\n")
 		end
 		last_best_layout = best_layout_so_far

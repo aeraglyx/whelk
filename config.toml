@@ -6,7 +6,7 @@ trigram_quality = 0.9  # 1.0 will be the most accurate at the cost of speed
 langs.en = 1.0
 langs.cs = 0.0
 
-finger_strengths = [0.8, 1.0, 0.7, 0.4]  # index to pinkie
+finger_strengths = [1.0, 0.9, 0.7, 0.3]  # index to pinkie
 
 # stats
 sfb = 0.2  # same finger bigrams

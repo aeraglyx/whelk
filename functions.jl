@@ -218,11 +218,25 @@ function analyze_bigram(bigram, key_objects, settings)::Float64
 	if key_1.hand == key_2.hand
 		x = key_2.finger - key_1.finger
 		y = key_2.row - key_1.row
-		effort *= settings.sfb ^ (- abs(y) * strength(abs(x), settings.independence))
-		x < 0 && (effort /= settings.inroll ^ strength(abs(x) - 1, 0.5))
-		x > 0 && (effort /= settings.outroll ^ strength(abs(x) - 1, 0.5))
-	else
-		effort /= settings.alter
+
+		if x == 0
+			# same finger
+			effort *= settings.sfb * (1.0 + y * y)
+		else
+			# 1.0 for neighboring fingers and slowly decaying
+			dependence = 2.0 ^ ((1 - abs(x)) * settings.independence)
+
+			if y != 0
+				# scissor
+				effort *= 1.0 + settings.scissor * y * y * dependence
+			end
+
+			# rolls
+			x < 0 && (effort *= (1.0 + settings.inroll * dependence))
+			x > 0 && (effort *= (1.0 + settings.outroll * dependence))
+		end
+
+		effort *= settings.one_hand
 	end
 
 	return effort
@@ -234,24 +248,19 @@ function analyze_trigram(trigram, key_objects, settings)::Float64
 	key_2::Key = key_objects[trigram[2]]
 	key_3::Key = key_objects[trigram[3]]
 	
-	x13 = key_3.finger - key_1.finger
-	y13 = key_3.row - key_1.row
-	
-	# bigram_1 = analyze_bigram(trigram[1:2], key_objects, settings)
-	# bigram_2 = analyze_bigram(trigram[2:3], key_objects, settings)
-	# effort::Float64 = (bigram_1 + bigram_2) / 2  # XXX this emphasizes the middle stroke
 	effort::Float64 = (stroke_effort(key_1, settings) + stroke_effort(key_2, settings) + stroke_effort(key_2, settings)) / 3.0
 	
-	
 	if key_1.hand == key_3.hand
-		effort *= settings.dsfb ^ (- abs(y13) * strength(abs(x13), settings.independence))
+		# TODO bake DSBFs into bigram freqs
+		# effort += 0.5 * analyze_bigram(trigram[1:3 .!= 2], key_objects, settings)
+
 		if key_1.hand == key_2.hand
 			if (key_1.finger < key_2.finger > key_3.finger) || (key_1.finger > key_2.finger < key_3.finger)
-				effort /= settings.redirs
+				effort *= settings.redir
 			end
 		end
 	else
-		effort /= settings.sth
+		effort *= settings.sth
 	end
 
 	return effort

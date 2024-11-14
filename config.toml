@@ -17,7 +17,7 @@ alter = 1.4  # hand alteration, above 1.0 for more alteration
 redirs = 0.7  # redirects (like "est" on qwerty)
 sth = 1.5  # two letters one hand, one on the other or vice versa
 
-home_row = 1.2  # high value enforces the most frequent chars on home row
+off_home = 5.0  # high value enforces most frequent chars on home row
 prefer_top_row = 0.2  # negative for more prevalent bottom row
 independence = 1.0  # makes close-by bigrams more significant
 

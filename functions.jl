@@ -196,7 +196,9 @@ end
 
 function stroke_effort(key, settings)::Float64
 	stroke_effort::Float64 = 1.0 / settings.finger_strengths[key.finger]
-	# key.row != 2 && (stroke_effort *= 2.0 ^ settings.home_row)
+	if key.row != 2
+		stroke_effort *= (1.0 + abs(key.row - 2) * settings.off_home)
+	end
 	# stroke_effort *= 2.0 ^ ((key.row - 2.0) * settings.prefer_top_row)
 	return stroke_effort
 end

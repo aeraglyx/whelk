@@ -361,12 +361,15 @@ function get_char_array(key_objects, letter_freqs, settings)::Vector{Char}
 end
 
 function get_ngram_efforts(key_objects, settings)
+	# TODO skip mirrored ngrams
+
 	letter_efforts = zeros(Float64, 24)
 	for i in 1:24
 		letter = [i]
 		score = analyze_letter(letter, key_objects, settings)
 		letter_efforts[i] = score
 	end
+
 	bigram_efforts = zeros(Float64, 24, 24)
 	for i in 1:24
 		for j in 1:24
@@ -375,6 +378,7 @@ function get_ngram_efforts(key_objects, settings)
 			bigram_efforts[i, j] = score
 		end
 	end
+
 	trigram_efforts = zeros(Float64, 24, 24, 24)
 	# trigram_efforts = [analyze_trigram([i, j, k], key_objects, settings) for i in 1:24, j in 1:24, k in 1:24]
 	for i in 1:24
@@ -420,8 +424,6 @@ function score_layout!(layout, ngram_freqs, ngram_efforts, key_objects::Tuple, s
 	layout.score = score
 	return score
 end
-
-# TODO mirrored ngrams to reduce lookup
 
 function inspect_layout(layout::Layout, key_objects, letter_freqs, settings)
 	char_key_dict = make_char_dict(layout.layout_chars)

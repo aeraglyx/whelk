@@ -10,8 +10,8 @@ finger_strengths = [1.0, 0.9, 0.7, 0.3]  # index to pinkie
 
 # bigram stats
 one_hand = 2.0  # one-hand bigram effort compared to alteration
-sfb = 3.0  # same finger bigram effort
-scissor = 1.6  # scissor effort at 1U
+sfb = 5.0  # same finger bigram effort
+scissor = 4.0  # scissor effort at 1U
 inroll = 0.8  # inward roll effort (lower for more pinky > index rolls)
 outroll = 1.2  # outward roll effort (lower for more index > pinky rolls)
 
@@ -25,7 +25,7 @@ prefer_top_row = 0.2  # negative for more prevalent bottom row
 independence = 0.5  # makes far away bigrams less significant
 
 # misc
-enforce_balance = 1.0
+enforce_balance = 0.5
 vowel_side = true  # false for left, true for right
 keep_familiar = 0.0  # 0 has no effect, high value for fewer changes
 ref_layout = """

@@ -62,8 +62,7 @@ function normalize_vowels!(layout::Layout, vowel_side)
 	if (!vowel_side && n < 3) || (vowel_side && n > 3)
 		layout.layout_chars = mirror_chars(chars)
 	end
-	# TODO e on one side
-	# TODO or better yet, weight vowels by their freq
+	# TODO weight vowels by their freq
 end
 
 function make_char_dict(layout_chars)::Dict{Char, UInt8}

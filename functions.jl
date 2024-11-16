@@ -169,6 +169,35 @@ function get_bigram_freqs(word_freq_data::Dict{String, Float64}, letters, settin
 	return bigram_freqs
 end
 
+function get_bigram_freqs_v2(word_freq_data::Dict{String, Float64}, letters, settings)
+	bigram_freqs = Dict{SubString, Float64}()
+
+	for (word, freq) in word_freq_data
+		word_length = length(word)
+		word_length < 2 && continue
+
+		for n in 2:word_length
+			for ngram in ngrams_from_word(word, n)
+				bigram = ngram[[begin, end]]
+				!issubset(collect(bigram), letters) && continue
+				weight = settings.skipgram_weight ^ (n - 1)
+				if bigram in keys(bigram_freqs)
+					bigram_freqs[bigram] += freq * weight
+				else
+					bigram_freqs[bigram] = freq * weight
+				end
+			end
+		end
+	end
+
+	total = length(bigram_freqs)
+	bigram_freqs = normalize_dict!(bigram_freqs)
+	bigram_freqs = filter_dict!(bigram_freqs, settings.bigram_quality)
+	bigram_freqs = normalize_dict!(bigram_freqs)
+	println(length(bigram_freqs), " / ", total, " bigrams")
+	return bigram_freqs
+end
+
 function get_trigram_freqs(word_freq_data::Dict{String, Float64}, letters, settings)
 	trigram_freqs = Dict{SubString, Float64}()
 	for (word, freq) in word_freq_data
@@ -402,7 +431,7 @@ function get_ngram_freqs(settings)
 
 	letters = sort(collect(letter_freqs), by=x->x[2], rev=true)[1:24]
 	letters = [only(letter.first) for letter in letters]
-	bigram_freqs = get_bigram_freqs(word_data, letters, settings)
+	bigram_freqs = get_bigram_freqs_v2(word_data, letters, settings)
 	trigram_freqs = get_trigram_freqs(word_data, letters, settings)
 
 	ngram_freqs = (letter_freqs, bigram_freqs, trigram_freqs)
@@ -419,9 +448,10 @@ function score_layout!(layout, ngram_freqs, ngram_efforts, key_objects::Tuple, s
 	
 	letter_score = evaluate_letters(letter_freqs, letter_efforts, char_key_dict)
 	bigram_score = evaluate_bigrams(bigram_freqs, bigram_efforts, char_key_dict)
-	trigram_score = evaluate_trigrams(trigram_freqs, trigram_efforts, char_key_dict)
+	# trigram_score = evaluate_trigrams(trigram_freqs, trigram_efforts, char_key_dict)
 
-	score::Float64 = (letter_score + bigram_score + trigram_score) * finger_load / 3
+	# score::Float64 = (letter_score + bigram_score + trigram_score) * finger_load / 3
+	score::Float64 = (letter_score + bigram_score) * finger_load
 	layout.score = score
 	return score
 end

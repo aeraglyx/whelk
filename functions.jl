@@ -29,9 +29,10 @@ end
 
 function print_layout(layout::Layout)
 	chars = layout.layout_chars
-	println(join(chars[1:4],   ' '), "  ", join(chars[5:8],   ' '))
-	println(join(chars[9:12],  ' '), "  ", join(chars[13:16], ' '))
-	println(join(chars[17:20], ' '), "  ", join(chars[21:24], ' '))
+	middle_string = " *  * "
+	println(join(chars[1:4],   ' '), middle_string, join(chars[5:8],   ' '))
+	println(join(chars[9:12],  ' '), middle_string, join(chars[13:16], ' '))
+	println(join(chars[17:20], ' '), middle_string, join(chars[21:24], ' '))
 end
 
 function swap_keys!(layout::Layout)

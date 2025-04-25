@@ -1,27 +1,25 @@
 # Whelk
 
-A relatively fast 8x3 keyboard layout generator based on user preferences. Still WIP. 
+A simple, relatively fast keyboard layout generator. Still WIP. 
 
-One of the layouts found (not final):
+At 0.98 bigram_quality I'm getting roughly 50K layouts/s. Here's an example English layout generated in under 30s:
 ```
-v g n d  o u h w
-c s r t  a e i l
-f m p b  x y k j
+p l c m k  q h u o y
+d r s t f  b n e a i
+z j g w v  ~ x ~ ~ ~
 ```
 
-## Goal
+## Philosophy (TODO)
 
-After learning Colemak DH and getting into ergonomic keyboards I wanted to ditch the inner columns completely. So I needed a Colemak-y 24 key layout. Another inspiration was Ben Vallack's quest to reduce number of keys. Also it's a way for me to learn Julia and make something potentially useful.
+- punish same hand usage
+- punish same finger usage
+- punish scissors
+- punish eneven finger load
+- prefer inward rolls
 
-## Why 8x3
+## Why?
 
-There's a certain simplicity and elegance to it. #1DFH (one distance from home) is good, lateral motion is bad. If we don't count thumbs, that gives us 24 keys. If we try to keep only alphas on the main block, 2 low frequency letters won't fit and will have to be on a different layer. Here's the form factor I'm working with:
-```
-□ □ □ □       □ □ □ □
-■ ■ ■ ■       ■ ■ ■ ■
-□ □ □ □       □ □ □ □
-    □ ■ □   □ ■ □
-```
+- idk
 
 ## How to generate your own layout
 
@@ -29,6 +27,15 @@ There's a certain simplicity and elegance to it. #1DFH (one distance from home) 
 - Install Julia
 - Edit `config.toml`
 - Run `main.jl`
+
+## TODO
+
+- Shuffle all keys, not just the alphas.
+- Use corpus as a source to get better skipgram information around words and punctuation.
+- Plot the effort over time and optimize the generation algorithm.
+- Calculate all stats, not just the overall effort.
+- Repeat key.
+- Modularize the codebase.
 
 ## Attributions
 

@@ -32,7 +32,7 @@ function print_layout(layout::Layout)
 	middle_string = "  "
 	println(join(chars[1:5],   ' '), middle_string, join(chars[6:10],  ' '))
 	println(join(chars[11:15], ' '), middle_string, join(chars[16:20], ' '))
-	println(join(chars[21:25], ' '), middle_string, "~ ", chars[26], " ~ ~ ~")
+	println(join(chars[21:25], ' '), middle_string, "' ", chars[26], " , . ~")
 end
 
 function swap_keys!(layout::Layout)
@@ -566,7 +566,7 @@ function optimize_layout(settings)
 		end
 		last_best_layout = best_layout_so_far
 	end
-	speed = round(Int, count/(time()-t))
+	speed = round(Int, count / (time() - t))
 	println("Speed: ", speed, " layouts/s")
 	print("\n")
 end

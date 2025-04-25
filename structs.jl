@@ -1,7 +1,12 @@
+struct Offset
+	x::Float64
+	y::Float64
+end
+
 struct Key
 	hand::Bool
 	finger::Int
-	row::Int
+	offset::Offset
 end
 
 mutable struct Layout

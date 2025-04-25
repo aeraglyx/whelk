@@ -1,8 +1,6 @@
 iterations = 128
 initial_states = 32
-
 bigram_quality = 0.98  # 1.0 will be the most accurate at the cost of speed
-trigram_quality = 0.90  # 1.0 will be the most accurate at the cost of speed
 
 langs.en = 1.0
 
@@ -27,9 +25,3 @@ skipgram_weight = 0.3  # count skipgrams as bigrams but with lower weight
 # misc
 enforce_balance = 1.0
 vowel_side = true  # false for left, true for right
-keep_familiar = 0.0  # 0 has no effect, high value for fewer changes
-ref_layout = """
-q w f p   l u y -
-a r s t   n e i o
-z x c d   h - - -
-"""

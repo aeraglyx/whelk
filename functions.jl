@@ -71,14 +71,6 @@ function make_char_dict(layout_chars)::Dict{Char, UInt8}
 	return char_key_dict
 end
 
-function make_char_dict_ref(ref_layout)::Dict{Char, UInt8}
-	# layout_chars = normalize(string(ref_layout), stripmark=true, casefold=true)
-	layout_chars = [only(x) for x in split(ref_layout)]
-	char_key_dict::Dict{Char, UInt8} = Dict(layout_chars[i] => i for i in 1:26)
-	char_key_dict = filter(x -> isletter(first(x)), char_key_dict)
-	return char_key_dict
-end
-
 function get_data(lang)::String
 	url_base = "https://raw.githubusercontent.com/hermitdave/FrequencyWords/master/content/2018/"
 	url = url_base * lang * "/" * lang * "_50k.txt"
@@ -288,38 +280,6 @@ function get_finger_load(char_key_dict, letter_freqs, key_objects, settings)::Fl
 	balance = settings.enforce_balance
 	# *2 is like ^2 for the original finger loads
 	return 2 ^ (balance * sum(abs.(log2.(finger_load) .* 2)) / 8)
-end
-
-function how_hard_to_learn(char_key_dict, key_objects, settings, letter_freqs)::Float64
-	
-	iszero(settings.keep_familiar) && (return 1.0)
-
-	char_key_dict_ref = make_char_dict_ref(settings.ref_layout)
-	total::Float64 = 0.0
-	freq_total::Float64 = 0.0
-	
-	for char in keys(char_key_dict)
-
-		char ∉ keys(char_key_dict_ref) && continue  # ∈ ∉ not in
-		
-		key_1::Key = key_objects[char_key_dict[char]]
-		key_2::Key = key_objects[char_key_dict_ref[char]]
-
-		key_diff::Float64 = 1.0
-
-		key_1.hand != key_2.hand && (key_diff *= 2.0)
-		key_1.finger != key_2.finger && (key_diff *= 1.5)
-		key_1.offset.y != key_2.offset.y && (key_diff *= 1.25)
-
-		key_diff ^= settings.keep_familiar
-		
-		freq = letter_freqs[[char]]
-		freq_total += freq
-		key_diff *= freq
-		total += key_diff
-	end
-	return total / freq_total
-	# return 1.0
 end
 
 function get_char_array(key_objects, letter_freqs, settings)::Vector{Char}

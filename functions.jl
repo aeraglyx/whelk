@@ -224,6 +224,10 @@ function analyze_bigram(bigram, key_objects, settings)::Float64
 		if finger_diff == 0
 			# same finger
 			effort *= 1.0 + settings.sfb * displacement
+			
+			# up/down
+			y < 0 && (effort *= settings.top_to_bottom)
+			y > 0 && (effort /= settings.top_to_bottom)
 		else
 			# 1.0 for neighboring fingers and slowly decaying
 			dependence = 2.0 ^ ((1 - abs(finger_diff)) * settings.independence)
@@ -234,8 +238,8 @@ function analyze_bigram(bigram, key_objects, settings)::Float64
 			end
 
 			# rolls
-			finger_diff < 0 && (effort *= (1.0 + settings.inroll))
-			finger_diff > 0 && (effort *= (1.0 + settings.outroll))
+			finger_diff < 0 && (effort *= settings.inroll)
+			finger_diff > 0 && (effort /= settings.inroll)
 		end
 
 		effort *= settings.one_hand

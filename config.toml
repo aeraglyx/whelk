@@ -17,8 +17,8 @@ lateral = 1.5  # sideways movement effort (compared to up/down)
 one_hand = 24  # one-hand bigram effort compared to alteration
 sfb = 384  # same finger bigram effort
 scissor = 24 # scissor effort at 1U
-inroll = 0.75  # inward roll effort (lower for more pinky > index rolls)
-outroll = 1.25  # outward roll effort (lower for more index > pinky rolls)
+inroll = 0.8  # inward roll effort (reverse uses the reciprocal)
+top_to_bottom = 0.8  # top to bottom SFB effort (reverse uses the reciprocal)
 independence = 0.5  # makes far away bigrams less significant
 skipgram_weight = 0.3  # count skipgrams as bigrams but with lower weight
 

@@ -301,24 +301,33 @@ function get_char_array(key_objects, letter_freqs, settings)::Vector{Char}
 	return out
 end
 
-function get_ngram_efforts(key_objects, settings)
-	# TODO skip mirrored ngrams
-
-	letter_efforts = zeros(Float64, 26)
-	for i in 1:26
+function get_letter_efforts(key_objects, settings)
+	n = length(key_objects)
+	letter_efforts = zeros(Float64, n)
+	for i in 1:n
 		letter = [i]
 		score = analyze_letter(letter, key_objects, settings)
 		letter_efforts[i] = score
 	end
+	return letter_efforts
+end
 
-	bigram_efforts = zeros(Float64, 26, 26)
-	for i in 1:26
-		for j in 1:26
+function get_bigram_efforts(key_objects, settings)
+	n = length(key_objects)
+	bigram_efforts = zeros(Float64, n, n)
+	for i in 1:n
+		for j in 1:n
 			bigram = [i, j]
 			score = analyze_bigram(bigram, key_objects, settings)
 			bigram_efforts[i, j] = score
 		end
 	end
+	return bigram_efforts
+end
+
+function get_ngram_efforts(key_objects, settings)
+	letter_efforts = get_letter_efforts(key_objects, settings)
+	bigram_efforts = get_bigram_efforts(key_objects, settings)
 
 	ngram_efforts = (letter_efforts, bigram_efforts)
 	return ngram_efforts

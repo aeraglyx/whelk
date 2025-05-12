@@ -71,11 +71,24 @@ function make_char_dict(layout_chars)::Dict{Char, UInt8}
 	return char_key_dict
 end
 
-function get_data(lang)::String
+function download_lang_file(lang::String, lang_filepath::String)
 	url_base = "https://raw.githubusercontent.com/hermitdave/FrequencyWords/master/content/2018/"
 	url = url_base * lang * "/" * lang * "_50k.txt"
 	data = HTTP.request("GET", url).body
 	data = strip(String(data))
+	open(lang_filepath, "w") do io
+		print(io, data)
+	end
+end
+
+function get_data(lang)::String
+	lang_filepath = joinpath("data", lang * ".txt")
+	!isfile(lang_filepath) && download_lang_file(lang, lang_filepath)
+
+	data::String = ""
+	open(lang_filepath) do f
+		data = read(f, String)
+	end
 	return data
 end
 

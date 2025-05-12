@@ -462,11 +462,11 @@ function optimize_layout(settings)
 				push!(new_layouts, tmp_layout)
 			end
 			sort!(new_layouts, by=layout->layout.score, rev=false)
-			new_layouts = discard_bad_layouts!(new_layouts, 32.0, 4.0)
+			new_layouts = discard_bad_layouts!(new_layouts, 32.0, 3.0)
 			append!(layouts, new_layouts)
 		end
 		sort!(layouts, by=layout->layout.score, rev=false)
-		layouts = discard_bad_layouts!(layouts, 128.0, 4.0)
+		layouts = discard_bad_layouts!(layouts, 256.0, 3.0)
 		best_layout_so_far = layouts[1]
 		if best_layout_so_far.layout_chars != last_best_layout.layout_chars
 			println("$i / $iter")

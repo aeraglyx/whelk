@@ -10,11 +10,11 @@ langs.en = 1.0
 finger_strengths = [0.9, 1.0, 0.8, 0.4]  # index to pinkie
 
 # single stroke stats
-prefer_home = 1.0  # non home row effort (quadratic with distance)
+prefer_home = 1.5  # non home row effort (quadratic with distance)
 lateral = 1.5  # sideways movement effort (compared to up/down)
 
 # bigram and skipgram stats
-one_hand = 24  # one-hand bigram effort compared to alteration
+one_hand = 20  # one-hand bigram effort compared to alteration
 sfb = 384  # same finger bigram effort
 scissor = 24 # scissor effort at 1U
 inroll = 0.8  # inward roll effort (reverse uses the reciprocal)

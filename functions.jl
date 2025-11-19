@@ -172,7 +172,7 @@ function get_bigram_freqs(word_freq_data::Dict{String, Float64}, letters, settin
 	bigram_freqs = normalize_dict!(bigram_freqs)
 	bigram_freqs = filter_dict!(bigram_freqs, settings.bigram_quality)
 	bigram_freqs = normalize_dict!(bigram_freqs)
-	println(length(bigram_freqs), " / ", total, " bigrams")
+	println(length(bigram_freqs), "/", total, " bigrams")
 	return bigram_freqs
 end
 
@@ -201,7 +201,7 @@ function get_bigram_freqs_v2(word_freq_data::Dict{String, Float64}, letters, set
 	bigram_freqs = normalize_dict!(bigram_freqs)
 	bigram_freqs = filter_dict!(bigram_freqs, settings.bigram_quality)
 	bigram_freqs = normalize_dict!(bigram_freqs)
-	println(length(bigram_freqs), " / ", total, " bigrams")
+	println(length(bigram_freqs), "/", total, " bigrams")
 	return bigram_freqs
 end
 
@@ -406,7 +406,7 @@ function inspect_layout(layout::Layout, key_objects, letter_freqs, settings)
 	end
 
 	println("")
-	println("effort: ", round(layout.score, digits=2))
+	# println("effort: ", round(layout.score, digits=2))
 end
 
 function optimize_layout(settings)
@@ -459,10 +459,13 @@ function optimize_layout(settings)
 		score_layout!(layout, ngram_freqs, ngram_efforts, key_objects, settings)
 		push!(layouts, layout)
 	end
+
 	sort!(layouts, by=layout->layout.score, rev=false)
-	last_best_layout = layouts[1]
+	last_best_layout::Layout = layouts[1]
 	count = 0
 	t = time()
+	println("initializing...")
+
 	for i in 1:generations
 		for layout in layouts[:]
 			child_layouts::Vector{Layout} = []
@@ -477,21 +480,22 @@ function optimize_layout(settings)
 				push!(child_layouts, tmp_layout)
 			end
 			sort!(child_layouts, by=layout->layout.score, rev=false)
-			child_layouts = discard_bad_layouts!(child_layouts, convert(Float64, children), 3.0)
+			child_layouts = discard_bad_layouts!(child_layouts, convert(Float64, children), 2.0)
 			append!(layouts, child_layouts)
 		end
 		sort!(layouts, by=layout->layout.score, rev=false)
-		layouts = discard_bad_layouts!(layouts, convert(Float64, population), 3.0)
-		best_layout_so_far = layouts[1]
-		if best_layout_so_far.layout_chars != last_best_layout.layout_chars
-			println("$i / $generations")
-			print_layout(best_layout_so_far)
-			inspect_layout(best_layout_so_far, key_objects, ngram_freqs[1], settings)
-			print("\n")
-		end
-		last_best_layout = best_layout_so_far
+		layouts = discard_bad_layouts!(layouts, convert(Float64, population), 2.0)
+		last_best_layout = layouts[1]
+		last_best_effort = round(last_best_layout.score, digits=2)
+		current_population = length(layouts)
+		print("\r$i/$generations | effort: $last_best_effort | population: $current_population")
 	end
+
 	speed = round(Int, count / (time() - t))
-	println("Speed: ", speed, " layouts/s")
-	print("\n")
+	println("\nspeed: ", speed, " l/s")
+	println("")
+	print_layout(last_best_layout)
+	inspect_layout(last_best_layout, key_objects, ngram_freqs[1], settings)
+	println("")
+
 end

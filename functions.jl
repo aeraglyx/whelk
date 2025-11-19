@@ -237,7 +237,7 @@ function analyze_bigram(bigram, key_objects, settings)::Float64
 		if finger_diff == 0
 			# same finger
 			effort *= 1.0 + settings.sfb * displacement
-			
+
 			# up/down
 			y < 0 && (effort *= settings.top_to_bottom)
 			y > 0 && (effort /= settings.top_to_bottom)
@@ -362,10 +362,10 @@ function score_layout!(layout, ngram_freqs, ngram_efforts, key_objects::Tuple, s
 
 	letter_freqs, bigram_freqs = ngram_freqs
 	letter_efforts, bigram_efforts = ngram_efforts
-	
+
 	char_key_dict = make_char_dict(layout.layout_chars)
 	finger_load = get_finger_load(char_key_dict, letter_freqs, key_objects, settings)
-	
+
 	letter_score = evaluate_letters(letter_freqs, letter_efforts, char_key_dict)
 	bigram_score = evaluate_bigrams(bigram_freqs, bigram_efforts, char_key_dict)
 
@@ -456,7 +456,7 @@ function optimize_layout(settings)
 				tmp_layout = deepcopy(layout)
 				swap_keys!(tmp_layout)
 				# normalize_vowels!(tmp_layout, settings.vowel_side)
-				layout.layout_chars == tmp_layout.layout_chars && continue  # XXX
+				layout.layout_chars == tmp_layout.layout_chars && continue	# XXX
 				score_layout!(tmp_layout, ngram_freqs, ngram_efforts, key_objects, settings)
 				count += 1
 				push!(new_layouts, tmp_layout)

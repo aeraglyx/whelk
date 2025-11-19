@@ -13,7 +13,6 @@ function get_settings(config)
 end
 
 function naka_rushton(x::Float64, p::Float64, g::Float64)::Float64
-	x = max(0, x - 4)  # so it never deletes the best 4
 	tmp = (x / p) ^ g
 	return tmp / (tmp + 1.0)
 end
@@ -21,7 +20,9 @@ end
 function discard_bad_layouts!(layouts, pivot::Float64, gamma::Float64)
 	new = Vector{Layout}()
 	for (i, layout) in enumerate(layouts)
-		if naka_rushton(convert(Float64, i) - 1.0, pivot, gamma) < rand(Float64)
+		i = max(0, i - 4)  # so it never deletes the best 4
+		survival_probability = naka_rushton(convert(Float64, i) - 1.0, pivot, gamma)
+		if survival_probability < rand(Float64)
 			push!(new, layout)
 		end
 	end

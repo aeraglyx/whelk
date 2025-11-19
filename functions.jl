@@ -99,7 +99,7 @@ function get_word_data(langs::Dict{String, Any})::Dict{String, Float64}
 		data_per_lang = Dict{String, Float64}()
 		freq_total::UInt = 0
 		data = get_data(lang)
-		for line in split(data, "\n")
+		for line in eachline(IOBuffer(data))
 			word, freq = split(line, ' ')
 			word = normalize(string(word), stripmark=true, casefold=true)
 			word = filter(isascii, word)

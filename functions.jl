@@ -31,10 +31,10 @@ end
 
 function print_layout(layout::Layout)
 	chars = layout.layout_chars
-	middle_string = "  "
-	println(join(chars[1:5],   ' '), middle_string, join(chars[6:10],  ' '))
-	println(join(chars[11:15], ' '), middle_string, join(chars[16:20], ' '))
-	println(join(chars[21:25], ' '), middle_string, "' ", chars[26], " , . ~")
+	space_str = "  "
+	println(join(chars[1:5],   space_str), space_str, join(chars[6:10],  space_str))
+	println(join(chars[11:15], space_str), space_str, join(chars[16:20], space_str))
+	println(join(chars[21:25], space_str), space_str, "'  ", chars[26], "  ,  .  /")
 end
 
 function swap_keys!(layout::Layout)
@@ -389,10 +389,12 @@ function inspect_layout(layout::Layout, key_objects, letter_freqs, settings)
 	for (i, finger) in enumerate(finger_usage)
 		print(string(Int(round(100 * finger)), pad=2), " ")
 		if i == 4
-			print(" ")
+			print("     ")
 		end
 	end
+
 	println("")
+	println("effort: ", round(layout.score, digits=2))
 end
 
 function optimize_layout(settings)

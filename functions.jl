@@ -157,27 +157,6 @@ end
 
 function get_bigram_freqs(word_freq_data::Dict{String, Float64}, letters, settings)
 	bigram_freqs = Dict{SubString, Float64}()
-	for (word, freq) in word_freq_data
-		length(word) < 2 && continue
-		for ngram in ngrams_from_word(word, 2)
-			!issubset(collect(ngram), letters) && continue
-			if ngram in keys(bigram_freqs)
-				bigram_freqs[ngram] += freq
-			else
-				bigram_freqs[ngram] = freq
-			end
-		end
-	end
-	total = length(bigram_freqs)
-	bigram_freqs = normalize_dict!(bigram_freqs)
-	bigram_freqs = filter_dict!(bigram_freqs, settings.bigram_quality)
-	bigram_freqs = normalize_dict!(bigram_freqs)
-	println(length(bigram_freqs), "/", total, " bigrams")
-	return bigram_freqs
-end
-
-function get_bigram_freqs_v2(word_freq_data::Dict{String, Float64}, letters, settings)
-	bigram_freqs = Dict{SubString, Float64}()
 
 	for (word, freq) in word_freq_data
 		word_length = length(word)
@@ -358,7 +337,7 @@ function get_ngram_freqs(settings)
 
 	letters = sort(collect(letter_freqs), by=x->x[2], rev=true)[1:26]
 	letters = [only(letter.first) for letter in letters]
-	bigram_freqs = get_bigram_freqs_v2(word_data, letters, settings)
+	bigram_freqs = get_bigram_freqs(word_data, letters, settings)
 
 	ngram_freqs = (letter_freqs, bigram_freqs)
 	return ngram_freqs

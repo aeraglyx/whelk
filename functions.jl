@@ -217,34 +217,46 @@ function letter_effort(key::Key, settings)::Float64
 	return effort
 end
 
+function get_dexterity_integrated(dexterity_map)::Vector{Float64}
+	accum::Float64 = 0.0
+	dexterity_integrated = Vector{Float64}(undef, length(dexterity_map))
+	for i in 1:length(dexterity_map)
+		dexterity_integrated[i] = accum
+		if i < 4
+			accum += (dexterity_map[i] + dexterity_map[i+1]) * 0.5
+		end
+	end
+	return dexterity_integrated
+end
+
 function bigram_effort(key_1::Key, key_2::Key, settings)::Float64
 
 	effort::Float64 = (letter_effort(key_1, settings) + letter_effort(key_2, settings)) / 2.0
 
+	# TODO: put this outside
+	dexterity_map = settings.finger_dexterity
+	dexterity_integrated = get_dexterity_integrated(dexterity_map)
+
 	if key_1.hand == key_2.hand
 		finger_diff = key_2.finger - key_1.finger
+		bigram_dexterity = abs(dexterity_integrated[key_2.finger] - dexterity_integrated[key_1.finger])
 
 		x = key_2.offset.x - key_1.offset.x
 		y = key_2.offset.y - key_1.offset.y
 		displacement = settings.lateral * x * x + y * y
 
 		if finger_diff == 0
-			# same finger
 			effort *= 1.0 + settings.sfb * displacement
 
-			# up/down
 			y < 0 && (effort *= settings.top_to_bottom)
 			y > 0 && (effort /= settings.top_to_bottom)
 		else
-			# 1.0 for neighboring fingers and slowly decaying
-			dependence = 2.0 ^ ((1 - abs(finger_diff)) * settings.independence)
+			dependence = 0.5 ^ (bigram_dexterity * settings.independence)
 
 			if y != 0
-				# scissor
 				effort *= 1.0 + settings.scissor * displacement * dependence
 			end
 
-			# rolls
 			finger_diff < 0 && (effort *= settings.inroll)
 			finger_diff > 0 && (effort /= settings.inroll)
 		end

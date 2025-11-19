@@ -203,29 +203,21 @@ function get_bigram_freqs_v2(word_freq_data::Dict{String, Float64}, letters, set
 	return bigram_freqs
 end
 
-function stroke_effort(key, settings)::Float64
-	stroke_effort::Float64 = 1.0 / settings.finger_strengths[key.finger]
+function letter_effort(key::Key, settings)::Float64
+	effort::Float64 = 1.0 / settings.finger_strengths[key.finger]
 
 	x = key.offset.x
 	y = key.offset.y
 	displacement = settings.lateral * x * x + y * y
 
-	stroke_effort *= (1.0 + displacement * settings.prefer_home)
+	effort *= (1.0 + displacement * settings.prefer_home)
 
-	return stroke_effort
+	return effort
 end
 
-function analyze_letter(char, key_objects, settings)::Float64
-	key::Key = key_objects[char[1]]
-	return stroke_effort(key, settings)
-end
+function bigram_effort(key_1::Key, key_2::Key, settings)::Float64
 
-function analyze_bigram(bigram, key_objects, settings)::Float64
-
-	key_1::Key = key_objects[bigram[1]]
-	key_2::Key = key_objects[bigram[2]]
-
-	effort::Float64 = (stroke_effort(key_1, settings) + stroke_effort(key_2, settings)) / 2.0
+	effort::Float64 = (letter_effort(key_1, settings) + letter_effort(key_2, settings)) / 2.0
 
 	if key_1.hand == key_2.hand
 		finger_diff = key_2.finger - key_1.finger
@@ -301,7 +293,7 @@ end
 
 function get_char_array(key_objects, letter_freqs, settings)::Vector{Char}
 	efforts = Vector{Float64}(undef, 26)
-	efforts = [stroke_effort(key, settings) for key in key_objects]
+	efforts = [letter_effort(key, settings) for key in key_objects]
 	efforts += rand(Float64, 26) .* 0.01
 	letters = sort(collect(letter_freqs), by=x->x[2], rev=true)[1:26]
 	letters = [only(letter.first) for letter in letters]
@@ -318,9 +310,8 @@ function get_letter_efforts(key_objects, settings)
 	n = length(key_objects)
 	letter_efforts = zeros(Float64, n)
 	for i in 1:n
-		letter = [i]
-		score = analyze_letter(letter, key_objects, settings)
-		letter_efforts[i] = score
+		effort = letter_effort(key_objects[i], settings)
+		letter_efforts[i] = effort
 	end
 	return letter_efforts
 end
@@ -330,9 +321,8 @@ function get_bigram_efforts(key_objects, settings)
 	bigram_efforts = zeros(Float64, n, n)
 	for i in 1:n
 		for j in 1:n
-			bigram = [i, j]
-			score = analyze_bigram(bigram, key_objects, settings)
-			bigram_efforts[i, j] = score
+			effort = bigram_effort(key_objects[i], key_objects[j], settings)
+			bigram_efforts[i, j] = effort
 		end
 	end
 	return bigram_efforts

@@ -1,6 +1,6 @@
-iterations = 128
-initial_states = 32
-bigram_quality = 0.98  # 1.0 will be the most accurate at the cost of speed
+generations = 128
+population = 128
+children = 64
 
 langs.en = 1.0
 

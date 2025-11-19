@@ -2,6 +2,7 @@ import Unicode: isletter, normalize
 
 using TOML
 using HTTP
+using Random
 
 
 
@@ -306,6 +307,12 @@ function get_char_array(key_objects, letter_freqs, settings)::Vector{Char}
 	return out
 end
 
+function get_char_array_rnd(key_objects, letter_freqs, settings)::Vector{Char}
+	letters = sort(collect(letter_freqs), by=x->x[2], rev=true)[1:26]
+	letters = [only(letter.first) for letter in letters]
+	return shuffle(letters)
+end
+
 function get_letter_efforts(key_objects, settings)
 	n = length(key_objects)
 	letter_efforts = zeros(Float64, n)
@@ -425,9 +432,13 @@ function optimize_layout(settings)
 	ngram_efforts = get_ngram_efforts(key_objects, settings)
 	ngram_freqs = get_ngram_freqs(settings)
 
-	layouts = []
-	for _ in 1:settings.initial_states
-		chars = get_char_array(key_objects, ngram_freqs[1], settings)
+	generations = settings.generations
+	population = settings.population
+	children = settings.children
+
+	layouts::Vector{Layout} = []
+	for _ in 1:population
+		chars = get_char_array_rnd(key_objects, ngram_freqs[1], settings)
 		layout = Layout(chars, Inf)
 		# normalize_vowels!(layout, settings.vowel_side)
 		score_layout!(layout, ngram_freqs, ngram_efforts, key_objects, settings)
@@ -435,34 +446,31 @@ function optimize_layout(settings)
 	end
 	sort!(layouts, by=layout->layout.score, rev=false)
 	last_best_layout = layouts[1]
-	iter = settings.iterations
 	count = 0
 	t = time()
-	for i in 1:iter
-		layouts_copy = deepcopy(layouts)
-		for layout in layouts_copy
-			new_layouts = []
-			while length(new_layouts) < 32
+	for i in 1:generations
+		for layout in layouts[:]
+			child_layouts::Vector{Layout} = []
+			# TODO: fewer children for bad parents?
+			while length(child_layouts) < children
 				tmp_layout = deepcopy(layout)
 				swap_keys!(tmp_layout)
 				# normalize_vowels!(tmp_layout, settings.vowel_side)
-				layout.layout_chars == tmp_layout.layout_chars && continue	# XXX
+				layout.layout_chars == tmp_layout.layout_chars && continue  # XXX
 				score_layout!(tmp_layout, ngram_freqs, ngram_efforts, key_objects, settings)
 				count += 1
-				push!(new_layouts, tmp_layout)
+				push!(child_layouts, tmp_layout)
 			end
-			sort!(new_layouts, by=layout->layout.score, rev=false)
-			new_layouts = discard_bad_layouts!(new_layouts, 32.0, 3.0)
-			append!(layouts, new_layouts)
+			sort!(child_layouts, by=layout->layout.score, rev=false)
+			child_layouts = discard_bad_layouts!(child_layouts, convert(Float64, children), 3.0)
+			append!(layouts, child_layouts)
 		end
 		sort!(layouts, by=layout->layout.score, rev=false)
-		layouts = discard_bad_layouts!(layouts, 256.0, 3.0)
+		layouts = discard_bad_layouts!(layouts, convert(Float64, population), 3.0)
 		best_layout_so_far = layouts[1]
 		if best_layout_so_far.layout_chars != last_best_layout.layout_chars
-			println("$i / $iter")
+			println("$i / $generations")
 			print_layout(best_layout_so_far)
-			# score = round(best_layout_so_far.score, digits=3)
-			# println("Score: $score")
 			inspect_layout(best_layout_so_far, key_objects, ngram_freqs[1], settings)
 			print("\n")
 		end

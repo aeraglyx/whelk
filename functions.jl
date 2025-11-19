@@ -268,25 +268,21 @@ function bigram_effort(key_1::Key, key_2::Key, settings)::Float64
 end
 
 function evaluate_letters(letter_freqs, letter_efforts, char_key_dict)::Float64
-	total_freq::Float64 = 0.0
 	total_score::Float64 = 0.0
 	for (ngram, freq) in letter_freqs
-		ngram_score = letter_efforts[char_key_dict[ngram[1]]] * freq
-		total_freq += freq
-		total_score += ngram_score
+		current_score = letter_efforts[char_key_dict[ngram[1]]] * freq
+		total_score += current_score
 	end
-	return total_score / total_freq
+	return total_score
 end
 
 function evaluate_bigrams(bigram_freqs, bigram_efforts, char_key_dict)::Float64
-	total_freq::Float64 = 0.0
 	total_score::Float64 = 0.0
 	for (ngram, freq) in bigram_freqs
-		ngram_score = bigram_efforts[char_key_dict[ngram[1]], char_key_dict[ngram[2]]] * freq
-		total_freq += freq
-		total_score += ngram_score
+		current_score = bigram_efforts[char_key_dict[ngram[1]], char_key_dict[ngram[2]]] * freq
+		total_score += current_score
 	end
-	return total_score / total_freq
+	return total_score
 end
 
 function get_finger_load(char_key_dict, letter_freqs, key_objects, settings)::Float64

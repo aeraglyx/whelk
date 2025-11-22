@@ -46,7 +46,6 @@ function swap_keys!(layout::Layout)
 		rnd2::UInt8 = rand(1:26)
 		chars[rnd1], chars[rnd2] = chars[rnd2], chars[rnd1]
 	end
-	# TODO swap vowels only on one hand
 end
 
 function mirror_index(x::Int)::Int
@@ -66,7 +65,7 @@ function normalize_vowels!(layout::Layout, vowel_side)
 	if (!vowel_side && n < 3) || (vowel_side && n > 3)
 		layout.layout_chars = mirror_chars(chars)
 	end
-	# TODO weight vowels by their freq
+	# TODO: weight vowels by their freq
 end
 
 function make_char_dict(layout_chars)::Dict{Char, UInt8}
@@ -277,7 +276,7 @@ function get_finger_load(char_key_dict, letter_freqs, key_objects, settings)::Fl
 	end
 
 	balance = settings.enforce_balance
-	# *2 is like ^2 for the original finger loads
+	# NOTE: *2 is like ^2 for the original finger loads
 	return 2 ^ (balance * sum(abs.(log2.(finger_load) .* 2)) / 8)
 end
 
@@ -417,7 +416,7 @@ function optimize_layout(settings)
 		Key(true,  1, Offset(0.0, -1.0)),
 		# Key(true,  2, Offset(0.0, -1.0)),
 		# Key(true,  3, Offset(0.0, -1.0)),
-		# Key(true,  4, Offset(0.0, -1.0))
+		# Key(true,  4, Offset(0.0, -1.0)),
 	)
 
 	ngram_efforts = get_ngram_efforts(key_objects, settings)

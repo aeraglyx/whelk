@@ -17,16 +17,17 @@ function naka_rushton(x::Float64, p::Float64, g::Float64)::Float64
 	return tmp / (tmp + 1.0)
 end
 
-function discard_bad_layouts!(layouts, pivot::Float64, gamma::Float64)
-	new = Vector{Layout}()
-	for (i, layout) in enumerate(layouts)
-		i = max(0, i - 4)  # so it never deletes the best 4
-		survival_probability = naka_rushton(convert(Float64, i) - 1.0, pivot, gamma)
-		if survival_probability < rand(Float64)
-			push!(new, layout)
-		end
-	end
-	return new
+function survives(i, pivot, g)
+	i = max(0, i - 4)  # so it never deletes the best 4
+	survival_probability = naka_rushton(convert(Float64, i), pivot, g)
+	return survival_probability < rand(Float64)
+end
+
+function discard_bad_layouts!(layouts, pivot::Float64, g::Float64)
+	# TODO: put normalization outside or hardcode g
+	normalization = g * sin(pi / g) / pi
+	pivot *= normalization  # so pivot later matches population
+	return [x for (i, x) in enumerate(layouts) if survives(i, pivot, g)]
 end
 
 function print_layout(layout::Layout)

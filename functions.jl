@@ -95,24 +95,25 @@ function get_data(lang)::String
 end
 
 function get_word_data(langs::Dict{String, Any})::Dict{String, Float64}
-	datax = Dict{String, Float64}()
+	data = Dict{String, Float64}()
 	for (lang, weight) in langs
 		weight == 0.0 && continue
-		data_per_lang = Dict{String, Float64}()
+		data_per_lang = Dict{String, UInt}()
 		freq_total::UInt = 0
-		data = get_data(lang)
-		for line in eachline(IOBuffer(data))
+		data_raw = get_data(lang)
+		for line in eachline(IOBuffer(data_raw))
 			word, freq = split(line, ' ')
 			word = normalize(string(word), stripmark=true, casefold=true)
 			word = filter(isascii, word)
 			word = filter(isletter, word)
 			freq = parse(UInt, freq)
 			freq_total += freq
-			data_per_lang[word] = freq
+			data_per_lang[word] = get!(data_per_lang, word, 0) + freq
 		end
-		mergewith!(+, datax, Dict(word => freq * weight / freq_total for (word, freq) in data_per_lang))
+		weighted_data = Dict(word => weight * freq / freq_total for (word, freq) in data_per_lang)
+		mergewith!(+, data, weighted_data)
 	end
-	return datax
+	return data
 end
 
 function ngrams_from_word(word, n)

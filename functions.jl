@@ -140,15 +140,10 @@ function filter_dict!(dict, threshold)
 end
 
 function get_letter_freqs(word_freq_data::Dict{String, Float64})
-	letter_freqs = Dict{Vector{Char}, Float64}()
+	letter_freqs = Dict{Char, Float64}()
 	for (word, freq) in word_freq_data
 		for letter in word  # todo
-			# !(letter[1] in letters) && continue
-			if [letter] in keys(letter_freqs)
-				letter_freqs[[letter]] += freq
-			else
-				letter_freqs[[letter]] = freq
-			end
+			letter_freqs[letter] = get!(letter_freqs, letter, 0.0) + freq
 		end
 	end
 	letter_freqs = Dict(sort(collect(letter_freqs), by=x->x[2], rev=true)[1:26])
@@ -168,11 +163,7 @@ function get_bigram_freqs(word_freq_data::Dict{String, Float64}, letters, settin
 				bigram = ngram[[begin, end]]
 				!issubset(collect(bigram), letters) && continue
 				weight = settings.skipgram_weight ^ (n - 1)
-				if bigram in keys(bigram_freqs)
-					bigram_freqs[bigram] += freq * weight
-				else
-					bigram_freqs[bigram] = freq * weight
-				end
+				bigram_freqs[bigram] = get!(bigram_freqs, bigram, 0.0) + freq * weight
 			end
 		end
 	end
@@ -273,7 +264,7 @@ function get_finger_load(char_key_dict, letter_freqs, key_objects, settings)::Fl
 		key = key_objects[key_idx]
 		finger_idx = key.hand ? 4 + key.finger : 5 - key.finger
 		strength = settings.finger_strengths[key.finger]
-		finger_load[finger_idx] += letter_freqs[[char]] / strength * sum_thingy
+		finger_load[finger_idx] += letter_freqs[char] / strength * sum_thingy
 	end
 
 	balance = settings.enforce_balance
@@ -371,7 +362,7 @@ function inspect_layout(layout::Layout, key_objects, letter_freqs, settings)
 		else
 			i = 5 - i
 		end
-		finger_usage[i] += letter_freqs[[char]]
+		finger_usage[i] += letter_freqs[char]
 	end
 
 	for (i, finger) in enumerate(finger_usage)

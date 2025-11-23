@@ -40,10 +40,11 @@ end
 
 function swap_keys!(layout::Layout)
 	chars = layout.layout_chars
-	n::UInt8 = rand(1:8)
-	for _ in 1:n
-		rnd1::UInt8 = rand(1:26)
-		rnd2::UInt8 = rand(1:26)
+	n = length(chars)
+	k::UInt8 = rand(1:5)
+	for _ in 1:k
+		rnd1::UInt8 = rand(1:n)
+		rnd2::UInt8 = rand(1:n)
 		chars[rnd1], chars[rnd2] = chars[rnd2], chars[rnd1]
 	end
 end

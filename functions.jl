@@ -203,7 +203,7 @@ end
 
 function bigram_effort(key_1::Key, key_2::Key, settings)::Float64
 
-	effort::Float64 = (letter_effort(key_1, settings) + letter_effort(key_2, settings)) / 2.0
+	effort::Float64 = 1.0
 
 	# TODO: put this outside
 	dexterity_map = settings.finger_dexterity
@@ -218,7 +218,7 @@ function bigram_effort(key_1::Key, key_2::Key, settings)::Float64
 		displacement = settings.lateral * x * x + y * y
 
 		if finger_diff == 0
-			effort *= 1.0 + settings.sfb * displacement
+			effort *= 1.0 + settings.sfb * displacement / dexterity_map[key_1.finger]
 
 			y < 0 && (effort *= settings.top_to_bottom)
 			y > 0 && (effort /= settings.top_to_bottom)

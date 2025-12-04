@@ -1,8 +1,8 @@
 # Whelk
 
-A simple, relatively fast keyboard layout generator. Still WIP. 
+A simple, relatively fast keyboard layout generator. Still WIP.
 
-At 0.98 bigram_quality I'm getting roughly 50K layouts/s. Here's an example English layout generated in under 30s:
+At 0.98 bigram_quality I'm getting roughly 80K layouts/s. Here's an example English layout generated in under 30s:
 ```
 p l c m k  q h u o y
 d r s t f  b n e a i

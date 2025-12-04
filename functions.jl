@@ -154,7 +154,7 @@ function get_letter_freqs(word_freq_data::Dict{String, Float64})
 	return letter_freqs
 end
 
-function get_bigram_freqs_from_spaces(word_freq_data::Dict{String, Float64}, letters, cfg)
+function get_bigram_freqs_from_spaces(word_freq_data::Dict{String, Float64}, letters, skipgram_weight)
 	start_freqs = Dict{Char, Float64}()
 	end_freqs = Dict{Char, Float64}()
 
@@ -165,7 +165,7 @@ function get_bigram_freqs_from_spaces(word_freq_data::Dict{String, Float64}, let
 			n2 = word_length - n1 + 1
 			l1 = word[n1]
 			l2 = word[n2]
-			weight = cfg.skipgram_weight ^ (n1 - 1)
+			weight = skipgram_weight ^ (n1 - 1)
 			start_freqs[l1] = get!(start_freqs, l1, 0.0) + freq * weight
 			end_freqs[l2] = get!(end_freqs, l2, 0.0) + freq * weight
 		end
@@ -182,7 +182,7 @@ function get_bigram_freqs_from_spaces(word_freq_data::Dict{String, Float64}, let
 	return bigram_freqs
 end
 
-function get_bigram_freqs_from_words(word_freq_data::Dict{String, Float64}, letters, cfg)
+function get_bigram_freqs_from_words(word_freq_data::Dict{String, Float64}, letters, skipgram_weight)
 	bigram_freqs = Dict{NTuple{2, Char}, Float64}()
 
 	for (word, freq) in word_freq_data
@@ -193,7 +193,7 @@ function get_bigram_freqs_from_words(word_freq_data::Dict{String, Float64}, lett
 			for ngram in ngrams_from_word(word, n)
 				bigram = Tuple([ngram[begin], ngram[end]])
 				!issubset(collect(bigram), letters) && continue
-				weight = cfg.skipgram_weight ^ (n - 1)
+				weight = skipgram_weight ^ (n - 1)
 				bigram_freqs[bigram] = get!(bigram_freqs, bigram, 0.0) + freq * weight
 			end
 		end
@@ -204,8 +204,8 @@ function get_bigram_freqs_from_words(word_freq_data::Dict{String, Float64}, lett
 end
 
 function get_bigram_freqs(word_freq_data::Dict{String, Float64}, letters, cfg)
-	freqs_from_words = get_bigram_freqs_from_words(word_freq_data, letters, cfg)
-	freqs_from_spaces = get_bigram_freqs_from_spaces(word_freq_data, letters, cfg)
+	freqs_from_words = get_bigram_freqs_from_words(word_freq_data, letters, cfg.skipgram_weight)
+	freqs_from_spaces = get_bigram_freqs_from_spaces(word_freq_data, letters, cfg.skipgram_weight)
 
 	typical_word_length = 5
 	space_weight = 0.75 * cfg.skipgram_weight / (typical_word_length + 1)

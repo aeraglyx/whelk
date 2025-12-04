@@ -4,10 +4,10 @@ using TOML
 using HTTP
 using Random
 
-include("./src/utils.jl")
-include("./src/data.jl")
-include("./src/freqs.jl")
-include("./src/efforts.jl")
+include("./utils.jl")
+include("./data.jl")
+include("./freqs.jl")
+include("./efforts.jl")
 
 
 function get_config(file)

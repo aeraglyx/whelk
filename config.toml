@@ -1,29 +1,26 @@
-generations = 128
-population = 512
-children = 32
+generations      = 256  # number of iterations
+population       = 512  # total number of good layouts to keep each generation
+children         = 32   # number of "mutations" per every layout
 
-bigram_quality = 0.98  # 1.0 will be the most accurate at the cost of speed
 
-langs.en = 1.0
-# langs.en = 0.75
-# langs.cs = 0.25
+langs.en         = 1.0  # language weights
+
+
+bigram_quality   = 0.98 # 1.0 will be the most accurate at the cost of speed
+skipgram_weight  = 0.3  # count skipgrams as bigrams but with lower weight
+
 
 finger_strengths = [0.9, 1.0, 0.8, 0.4]  # index to pinkie
 finger_dexterity = [1.0, 0.9, 0.7, 0.3]  # index to pinkie
 
-# single stroke stats
-prefer_home = 1.5  # non home row effort (quadratic with distance)
-lateral = 1.8  # sideways movement effort (compared to up/down)
+lateral          = 1.8  # sideways movement effort (compared to up/down)
+one_hand         = 24   # one-hand bigram effort compared to alteration
+sfb              = 370  # same finger bigram effort
+scissor          = 16   # scissor effort at 1U
+inroll           = 0.8  # inward roll effort (reverse uses the reciprocal)
+top_to_bottom    = 1.0  # top to bottom SFB effort (reverse uses the reciprocal)
+independence     = 0.5  # makes far away bigrams less significant
 
-# bigram and skipgram stats
-one_hand = 22  # one-hand bigram effort compared to alteration
-sfb = 384  # same finger bigram effort
-scissor = 18  # scissor effort at 1U
-inroll = 0.8  # inward roll effort (reverse uses the reciprocal)
-top_to_bottom = 1.0  # top to bottom SFB effort (reverse uses the reciprocal)
-independence = 0.5  # makes far away bigrams less significant
-skipgram_weight = 0.3  # count skipgrams as bigrams but with lower weight
-
-# misc
-enforce_balance = 0.8
-# vowel_side = true  # false for left, true for right
+prefer_home      = 1.5  # non home row effort (quadratic with distance)
+enforce_balance  = 0.7  # try to match finger load to finger strengths
+vowel_side       = true # false for left, true for right

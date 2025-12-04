@@ -123,8 +123,9 @@ end
 
 function normalize_dict!(dict)
 	value_total = sum(values(dict))
-	dict = Dict(key => value/value_total for (key, value) in dict)
-	return dict
+	for (key, value) in dict
+		dict[key] /= value_total
+	end
 end
 
 function filter_dict!(dict, threshold)

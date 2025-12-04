@@ -16,16 +16,19 @@ function get_config(file)
 	return config
 end
 
+
 function naka_rushton(x::Float64, p::Float64, g::Float64)::Float64
 	tmp = (x / p) ^ g
 	return tmp / (tmp + 1.0)
 end
+
 
 function survives(i, pivot, g)
 	i = max(0, i - 4)  # so it never deletes the best 4
 	survival_probability = naka_rushton(convert(Float64, i), pivot, g)
 	return survival_probability < rand(Float64)
 end
+
 
 function discard_bad_layouts!(layouts, pivot::Float64, g::Float64)
 	# TODO: put normalization outside or hardcode g
@@ -34,13 +37,6 @@ function discard_bad_layouts!(layouts, pivot::Float64, g::Float64)
 	return [x for (i, x) in enumerate(layouts) if survives(i, pivot, g)]
 end
 
-function print_layout(layout::Layout)
-	chars = layout.layout_chars
-	space_str = "  "
-	println(join(chars[1:5],   space_str), space_str, join(chars[6:10],  space_str))
-	println(join(chars[11:15], space_str), space_str, join(chars[16:20], space_str))
-	println(join(chars[21:25], space_str), space_str, "'  ", chars[26], "  ,  .  /")
-end
 
 function swap_keys!(layout::Layout)
 	chars = layout.layout_chars
@@ -53,14 +49,17 @@ function swap_keys!(layout::Layout)
 	end
 end
 
+
 function mirror_index(x::Int)::Int
 	return ((x - 1) ÷ 8) * 8 + 8 - (x - 1) % 8
 end
+
 
 function mirror_chars(chars)
 	perm = [mirror_index(x) for x in 1:24]
 	return chars[perm]
 end
+
 
 function normalize_vowels!(layout::Layout, vowel_side)
 	chars = layout.layout_chars
@@ -73,10 +72,12 @@ function normalize_vowels!(layout::Layout, vowel_side)
 	# TODO: weight vowels by their freq
 end
 
+
 function make_char_dict(layout_chars)::Dict{Char, UInt8}
 	char_key_dict::Dict{Char, UInt8} = Dict(layout_chars[i] => i for i in 1:26)
 	return char_key_dict
 end
+
 
 function evaluate_letters(letter_freqs, letter_efforts, char_key_dict)::Float64
 	total_score::Float64 = 0.0
@@ -87,6 +88,7 @@ function evaluate_letters(letter_freqs, letter_efforts, char_key_dict)::Float64
 	return total_score
 end
 
+
 function evaluate_bigrams(bigram_freqs, bigram_efforts, char_key_dict)::Float64
 	total_score::Float64 = 0.0
 	for (ngram, freq) in bigram_freqs
@@ -95,6 +97,7 @@ function evaluate_bigrams(bigram_freqs, bigram_efforts, char_key_dict)::Float64
 	end
 	return total_score
 end
+
 
 function get_finger_load(char_key_dict, letter_freqs, key_objects, cfg)::Float64
 
@@ -112,26 +115,13 @@ function get_finger_load(char_key_dict, letter_freqs, key_objects, cfg)::Float64
 	return 2 ^ (balance * sum(abs.(log2.(finger_load) .* 2)) / 8)
 end
 
-function get_char_array(key_objects, letter_freqs, cfg)::Vector{Char}
-	efforts = Vector{Float64}(undef, 26)
-	efforts = [letter_effort(key, cfg) for key in key_objects]
-	efforts += rand(Float64, 26) .* 0.01
-	letters = sort(collect(letter_freqs), by=x->x[2], rev=true)[1:26]
-	letters = [only(letter.first) for letter in letters]
-	out = Vector{Char}(undef, 26)
-	for letter in letters
-		idx = findmin(efforts)[2]
-		out[idx] = letter
-		efforts[idx] = Inf
-	end
-	return out
-end
 
 function get_char_array_rnd(key_objects, letter_freqs)::Vector{Char}
 	letters = sort(collect(letter_freqs), by=x->x[2], rev=true)[1:26]
 	letters = [only(letter.first) for letter in letters]
 	return shuffle(letters)
 end
+
 
 function get_ngram_freqs(cfg)
 	word_data = get_word_data(cfg.langs)
@@ -144,6 +134,7 @@ function get_ngram_freqs(cfg)
 	return ngram_freqs
 end
 
+
 function score_layout!(layout, ngram_freqs, ngram_efforts, key_objects::Tuple, cfg)::Float64
 
 	letter_freqs, bigram_freqs = ngram_freqs
@@ -152,13 +143,21 @@ function score_layout!(layout, ngram_freqs, ngram_efforts, key_objects::Tuple, c
 	char_key_dict = make_char_dict(layout.layout_chars)
 	finger_load = get_finger_load(char_key_dict, letter_freqs, key_objects, cfg)
 
-	letter_score = evaluate_letters(letter_freqs, letter_efforts, char_key_dict)
+	# letter_score = evaluate_letters(letter_freqs, letter_efforts, char_key_dict)
 	bigram_score = evaluate_bigrams(bigram_freqs, bigram_efforts, char_key_dict)
 
-	score::Float64 = (0.0 * letter_score + bigram_score) * finger_load
-	layout.score = score
-	return score
+	layout.score = bigram_score * finger_load
 end
+
+
+function print_layout(layout::Layout)
+	chars = layout.layout_chars
+	space_str = "  "
+	println(join(chars[1:5],   space_str), space_str, join(chars[6:10],  space_str))
+	println(join(chars[11:15], space_str), space_str, join(chars[16:20], space_str))
+	println(join(chars[21:25], space_str), space_str, "'  ", chars[26], "  ,  .  /")
+end
+
 
 function inspect_layout(layout::Layout, key_objects, letter_freqs)
 	char_key_dict = make_char_dict(layout.layout_chars)
@@ -173,16 +172,15 @@ function inspect_layout(layout::Layout, key_objects, letter_freqs)
 		end
 		finger_usage[i] += letter_freqs[char]
 	end
-
 	for (i, finger) in enumerate(finger_usage)
 		print(string(Int(round(100 * finger)), pad=2), " ")
 		if i == 4
 			print("     ")
 		end
 	end
-
 	println("")
 end
+
 
 function optimize_layout(cfg)
 
@@ -219,8 +217,8 @@ function optimize_layout(cfg)
 		# Key(true,  4, Offset(0.0, -1.0)),
 	)
 
-	ngram_efforts = get_ngram_efforts(key_objects, cfg)
 	ngram_freqs = get_ngram_freqs(cfg)
+	ngram_efforts = get_ngram_efforts(key_objects, cfg)
 
 	layouts::Vector{Layout} = []
 	for _ in 1:cfg.population

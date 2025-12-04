@@ -128,7 +128,7 @@ function normalize_dict!(dict)
 	end
 end
 
-function filter_dict!(dict, threshold)
+function filter_dict(dict, threshold)
 	sorted_pairs = sort(collect(dict), by=x->x[2], rev=true)
 	freq_total::Float64 = 0.0
 	for (i, thing) in enumerate(sorted_pairs)
@@ -149,12 +149,40 @@ function get_letter_freqs(word_freq_data::Dict{String, Float64})
 		end
 	end
 	letter_freqs = Dict(sort(collect(letter_freqs), by=x->x[2], rev=true)[1:26])
-	letter_freqs = normalize_dict!(letter_freqs)
+	normalize_dict!(letter_freqs)
 	return letter_freqs
 end
 
-function get_bigram_freqs(word_freq_data::Dict{String, Float64}, letters, settings)
-	bigram_freqs = Dict{SubString, Float64}()
+function get_bigram_freqs_from_spaces(word_freq_data::Dict{String, Float64}, letters, settings)
+	start_freqs = Dict{Char, Float64}()
+	end_freqs = Dict{Char, Float64}()
+
+	for (word, freq) in word_freq_data
+		word_length = length(word)
+
+		for n1 in 1:word_length
+			n2 = word_length - n1 + 1
+			l1 = word[n1]
+			l2 = word[n2]
+			weight = settings.skipgram_weight ^ (n1 - 1)
+			start_freqs[l1] = get!(start_freqs, l1, 0.0) + freq * weight
+			end_freqs[l2] = get!(end_freqs, l2, 0.0) + freq * weight
+		end
+	end
+
+	bigram_freqs = Dict{NTuple{2, Char}, Float64}()
+	for (start_letter, start_freq) in start_freqs
+		for (end_letter, end_freq) in end_freqs
+			bigram_freqs[Tuple([start_letter, end_letter])] = start_freq * end_freq
+		end
+	end
+
+	normalize_dict!(bigram_freqs)
+	return bigram_freqs
+end
+
+function get_bigram_freqs_from_words(word_freq_data::Dict{String, Float64}, letters, settings)
+	bigram_freqs = Dict{NTuple{2, Char}, Float64}()
 
 	for (word, freq) in word_freq_data
 		word_length = length(word)
@@ -162,7 +190,7 @@ function get_bigram_freqs(word_freq_data::Dict{String, Float64}, letters, settin
 
 		for n in 2:word_length
 			for ngram in ngrams_from_word(word, n)
-				bigram = ngram[[begin, end]]
+				bigram = Tuple([ngram[begin], ngram[end]])
 				!issubset(collect(bigram), letters) && continue
 				weight = settings.skipgram_weight ^ (n - 1)
 				bigram_freqs[bigram] = get!(bigram_freqs, bigram, 0.0) + freq * weight
@@ -170,11 +198,28 @@ function get_bigram_freqs(word_freq_data::Dict{String, Float64}, letters, settin
 		end
 	end
 
-	total = length(bigram_freqs)
-	bigram_freqs = normalize_dict!(bigram_freqs)
-	bigram_freqs = filter_dict!(bigram_freqs, settings.bigram_quality)
-	bigram_freqs = normalize_dict!(bigram_freqs)
-	println(length(bigram_freqs), "/", total, " bigrams")
+	normalize_dict!(bigram_freqs)
+	return bigram_freqs
+end
+
+function get_bigram_freqs(word_freq_data::Dict{String, Float64}, letters, settings)
+	freqs_from_words = get_bigram_freqs_from_words(word_freq_data, letters, settings)
+	freqs_from_spaces = get_bigram_freqs_from_spaces(word_freq_data, letters, settings)
+
+	typical_word_length = 5
+	space_weight = 0.75 * settings.skipgram_weight / (typical_word_length + 1)
+
+	bigram_freqs = mergewith(
+		(v1, v2) -> (1.0 - space_weight) * v1 + space_weight * v2,
+		freqs_from_words,
+		freqs_from_spaces
+	)
+
+	bigrams_total = length(bigram_freqs)
+	bigram_freqs = filter_dict(bigram_freqs, settings.bigram_quality)
+	println(length(bigram_freqs), "/", bigrams_total, " bigrams")
+
+	normalize_dict!(bigram_freqs)
 	return bigram_freqs
 end
 
@@ -329,8 +374,7 @@ function get_ngram_freqs(settings)
 	word_data = get_word_data(settings.langs)
 	letter_freqs = get_letter_freqs(word_data)
 
-	letters = sort(collect(letter_freqs), by=x->x[2], rev=true)[1:26]
-	letters = [only(letter.first) for letter in letters]
+	letters = [only(letter.first) for letter in letter_freqs]
 	bigram_freqs = get_bigram_freqs(word_data, letters, settings)
 
 	ngram_freqs = (letter_freqs, bigram_freqs)

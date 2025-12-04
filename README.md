@@ -1,12 +1,12 @@
 # Whelk
 
-A simple, relatively fast keyboard layout generator. Still WIP.
+A simple, relatively fast keyboard layout generator with support for multiple languages.
 
-At 0.98 bigram_quality I'm getting roughly 80K layouts/s. Here's an example English layout generated in under 30s:
+At 0.98 bigram coverage, I'm getting roughly 80K layouts/s on my machine. Here's an example English layout generated using the default settings:
 ```
-p l c m k  q h u o y
-d r s t f  b n e a i
-z j g w v  ~ x ~ ~ ~
+f b l c p z m o u q
+s n r d y v t a e i
+x h j g w ' k , . /
 ```
 
 ## Philosophy (TODO)
@@ -21,27 +21,28 @@ z j g w v  ~ x ~ ~ ~
 
 - idk
 
-## How to generate your own layout
+## Generate Your Own Layout
 
-- Clone the repository
 - Install Julia
-- Edit `config.toml`
-- Run `main.jl`
+- Clone this repository
+- Edit `config.toml` if needed
+- Run `julia src/main.jl`
 
 ## TODO
 
-- Shuffle all keys, not just the alphas.
-- Use corpus as a source to get better skipgram information around words and punctuation.
-- Plot the effort over time and optimize the generation algorithm.
-- Calculate all stats, not just the overall effort.
-- Repeat key.
-- Modularize the codebase.
+- Shuffle all keys, not just the alphas
+- Use corpus as a source to get better skipgram information around words and punctuation
+- Plot the effort over time and optimize the generation algorithm
+- Calculate all stats, not just the overall effort
+- Repeat key
+- Modularize the codebase
+- Multithreading
+- Matrix math
+- Check visited layouts
 
 ## Attributions
 
-For the word frequency data I'm accessing hermitdave's FrequencyWords repository:
-
-https://github.com/hermitdave/FrequencyWords
+For the word frequency data I'm accessing hermitdave's [FrequencyWords](https://github.com/hermitdave/FrequencyWords) repository.
 
 ---
 

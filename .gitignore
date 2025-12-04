@@ -1,8 +1,1 @@
-corpus.txt
-corpus_02.txt
-corpus_03.txt
-__pycache__
-texts
-texts2
-en_50k.txt
-freq_data
+data/

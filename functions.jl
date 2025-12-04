@@ -6,10 +6,10 @@ using Random
 
 
 
-function get_settings(config)
-	dict = TOML.parsefile(config)
-	settings = (; (Symbol(k) => v for (k,v) in dict)...)
-	return settings
+function get_config(file)
+	dict = TOML.parsefile(file)
+	config = (; (Symbol(k) => v for (k, v) in dict)...)
+	return config
 end
 
 function naka_rushton(x::Float64, p::Float64, g::Float64)::Float64
@@ -153,7 +153,7 @@ function get_letter_freqs(word_freq_data::Dict{String, Float64})
 	return letter_freqs
 end
 
-function get_bigram_freqs_from_spaces(word_freq_data::Dict{String, Float64}, letters, settings)
+function get_bigram_freqs_from_spaces(word_freq_data::Dict{String, Float64}, letters, cfg)
 	start_freqs = Dict{Char, Float64}()
 	end_freqs = Dict{Char, Float64}()
 
@@ -164,7 +164,7 @@ function get_bigram_freqs_from_spaces(word_freq_data::Dict{String, Float64}, let
 			n2 = word_length - n1 + 1
 			l1 = word[n1]
 			l2 = word[n2]
-			weight = settings.skipgram_weight ^ (n1 - 1)
+			weight = cfg.skipgram_weight ^ (n1 - 1)
 			start_freqs[l1] = get!(start_freqs, l1, 0.0) + freq * weight
 			end_freqs[l2] = get!(end_freqs, l2, 0.0) + freq * weight
 		end
@@ -181,7 +181,7 @@ function get_bigram_freqs_from_spaces(word_freq_data::Dict{String, Float64}, let
 	return bigram_freqs
 end
 
-function get_bigram_freqs_from_words(word_freq_data::Dict{String, Float64}, letters, settings)
+function get_bigram_freqs_from_words(word_freq_data::Dict{String, Float64}, letters, cfg)
 	bigram_freqs = Dict{NTuple{2, Char}, Float64}()
 
 	for (word, freq) in word_freq_data
@@ -192,7 +192,7 @@ function get_bigram_freqs_from_words(word_freq_data::Dict{String, Float64}, lett
 			for ngram in ngrams_from_word(word, n)
 				bigram = Tuple([ngram[begin], ngram[end]])
 				!issubset(collect(bigram), letters) && continue
-				weight = settings.skipgram_weight ^ (n - 1)
+				weight = cfg.skipgram_weight ^ (n - 1)
 				bigram_freqs[bigram] = get!(bigram_freqs, bigram, 0.0) + freq * weight
 			end
 		end
@@ -202,12 +202,12 @@ function get_bigram_freqs_from_words(word_freq_data::Dict{String, Float64}, lett
 	return bigram_freqs
 end
 
-function get_bigram_freqs(word_freq_data::Dict{String, Float64}, letters, settings)
-	freqs_from_words = get_bigram_freqs_from_words(word_freq_data, letters, settings)
-	freqs_from_spaces = get_bigram_freqs_from_spaces(word_freq_data, letters, settings)
+function get_bigram_freqs(word_freq_data::Dict{String, Float64}, letters, cfg)
+	freqs_from_words = get_bigram_freqs_from_words(word_freq_data, letters, cfg)
+	freqs_from_spaces = get_bigram_freqs_from_spaces(word_freq_data, letters, cfg)
 
 	typical_word_length = 5
-	space_weight = 0.75 * settings.skipgram_weight / (typical_word_length + 1)
+	space_weight = 0.75 * cfg.skipgram_weight / (typical_word_length + 1)
 
 	bigram_freqs = mergewith(
 		(v1, v2) -> (1.0 - space_weight) * v1 + space_weight * v2,
@@ -216,21 +216,21 @@ function get_bigram_freqs(word_freq_data::Dict{String, Float64}, letters, settin
 	)
 
 	bigrams_total = length(bigram_freqs)
-	bigram_freqs = filter_dict(bigram_freqs, settings.bigram_quality)
+	bigram_freqs = filter_dict(bigram_freqs, cfg.bigram_quality)
 	println(length(bigram_freqs), "/", bigrams_total, " bigrams")
 
 	normalize_dict!(bigram_freqs)
 	return bigram_freqs
 end
 
-function letter_effort(key::Key, settings)::Float64
-	effort::Float64 = 1.0 / settings.finger_strengths[key.finger]
+function letter_effort(key::Key, cfg)::Float64
+	effort::Float64 = 1.0 / cfg.finger_strengths[key.finger]
 
 	x = key.offset.x
 	y = key.offset.y
-	displacement = settings.lateral * x * x + y * y
+	displacement = cfg.lateral * x * x + y * y
 
-	effort *= (1.0 + displacement * settings.prefer_home)
+	effort *= (1.0 + displacement * cfg.prefer_home)
 
 	return effort
 end
@@ -247,12 +247,12 @@ function get_dexterity_integrated(dexterity_map)::Vector{Float64}
 	return dexterity_integrated
 end
 
-function bigram_effort(key_1::Key, key_2::Key, settings)::Float64
+function bigram_effort(key_1::Key, key_2::Key, cfg)::Float64
 
 	effort::Float64 = 1.0
 
 	# TODO: put this outside
-	dexterity_map = settings.finger_dexterity
+	dexterity_map = cfg.finger_dexterity
 	dexterity_integrated = get_dexterity_integrated(dexterity_map)
 
 	if key_1.hand == key_2.hand
@@ -261,25 +261,25 @@ function bigram_effort(key_1::Key, key_2::Key, settings)::Float64
 
 		x = key_2.offset.x - key_1.offset.x
 		y = key_2.offset.y - key_1.offset.y
-		displacement = settings.lateral * x * x + y * y
+		displacement = cfg.lateral * x * x + y * y
 
 		if finger_diff == 0
-			effort *= 1.0 + settings.sfb * displacement / dexterity_map[key_1.finger]
+			effort *= 1.0 + cfg.sfb * displacement / dexterity_map[key_1.finger]
 
-			y < 0 && (effort *= settings.top_to_bottom)
-			y > 0 && (effort /= settings.top_to_bottom)
+			y < 0 && (effort *= cfg.top_to_bottom)
+			y > 0 && (effort /= cfg.top_to_bottom)
 		else
-			dependence = 0.5 ^ (bigram_dexterity * settings.independence)
+			dependence = 0.5 ^ (bigram_dexterity * cfg.independence)
 
 			if y != 0
-				effort *= 1.0 + settings.scissor * displacement * dependence
+				effort *= 1.0 + cfg.scissor * displacement * dependence
 			end
 
-			finger_diff < 0 && (effort *= settings.inroll)
-			finger_diff > 0 && (effort /= settings.inroll)
+			finger_diff < 0 && (effort *= cfg.inroll)
+			finger_diff > 0 && (effort /= cfg.inroll)
 		end
 
-		effort *= settings.one_hand
+		effort *= cfg.one_hand
 	end
 
 	return effort
@@ -303,25 +303,25 @@ function evaluate_bigrams(bigram_freqs, bigram_efforts, char_key_dict)::Float64
 	return total_score
 end
 
-function get_finger_load(char_key_dict, letter_freqs, key_objects, settings)::Float64
+function get_finger_load(char_key_dict, letter_freqs, key_objects, cfg)::Float64
 
 	finger_load::Vector{Float64} = zeros(8)
-	sum_thingy = sum(1 ./ settings.finger_strengths)
+	sum_thingy = sum(1 ./ cfg.finger_strengths)
 	for (char, key_idx) in char_key_dict
 		key = key_objects[key_idx]
 		finger_idx = key.hand ? 4 + key.finger : 5 - key.finger
-		strength = settings.finger_strengths[key.finger]
+		strength = cfg.finger_strengths[key.finger]
 		finger_load[finger_idx] += letter_freqs[char] / strength * sum_thingy
 	end
 
-	balance = settings.enforce_balance
+	balance = cfg.enforce_balance
 	# NOTE: *2 is like ^2 for the original finger loads
 	return 2 ^ (balance * sum(abs.(log2.(finger_load) .* 2)) / 8)
 end
 
-function get_char_array(key_objects, letter_freqs, settings)::Vector{Char}
+function get_char_array(key_objects, letter_freqs, cfg)::Vector{Char}
 	efforts = Vector{Float64}(undef, 26)
-	efforts = [letter_effort(key, settings) for key in key_objects]
+	efforts = [letter_effort(key, cfg) for key in key_objects]
 	efforts += rand(Float64, 26) .* 0.01
 	letters = sort(collect(letter_freqs), by=x->x[2], rev=true)[1:26]
 	letters = [only(letter.first) for letter in letters]
@@ -334,60 +334,60 @@ function get_char_array(key_objects, letter_freqs, settings)::Vector{Char}
 	return out
 end
 
-function get_char_array_rnd(key_objects, letter_freqs, settings)::Vector{Char}
+function get_char_array_rnd(key_objects, letter_freqs, cfg)::Vector{Char}
 	letters = sort(collect(letter_freqs), by=x->x[2], rev=true)[1:26]
 	letters = [only(letter.first) for letter in letters]
 	return shuffle(letters)
 end
 
-function get_letter_efforts(key_objects, settings)
+function get_letter_efforts(key_objects, cfg)
 	n = length(key_objects)
 	letter_efforts = zeros(Float64, n)
 	for i in 1:n
-		effort = letter_effort(key_objects[i], settings)
+		effort = letter_effort(key_objects[i], cfg)
 		letter_efforts[i] = effort
 	end
 	return letter_efforts
 end
 
-function get_bigram_efforts(key_objects, settings)
+function get_bigram_efforts(key_objects, cfg)
 	n = length(key_objects)
 	bigram_efforts = zeros(Float64, n, n)
 	for i in 1:n
 		for j in 1:n
-			effort = bigram_effort(key_objects[i], key_objects[j], settings)
+			effort = bigram_effort(key_objects[i], key_objects[j], cfg)
 			bigram_efforts[i, j] = effort
 		end
 	end
 	return bigram_efforts
 end
 
-function get_ngram_efforts(key_objects, settings)
-	letter_efforts = get_letter_efforts(key_objects, settings)
-	bigram_efforts = get_bigram_efforts(key_objects, settings)
+function get_ngram_efforts(key_objects, cfg)
+	letter_efforts = get_letter_efforts(key_objects, cfg)
+	bigram_efforts = get_bigram_efforts(key_objects, cfg)
 
 	ngram_efforts = (letter_efforts, bigram_efforts)
 	return ngram_efforts
 end
 
-function get_ngram_freqs(settings)
-	word_data = get_word_data(settings.langs)
+function get_ngram_freqs(cfg)
+	word_data = get_word_data(cfg.langs)
 	letter_freqs = get_letter_freqs(word_data)
 
 	letters = [only(letter.first) for letter in letter_freqs]
-	bigram_freqs = get_bigram_freqs(word_data, letters, settings)
+	bigram_freqs = get_bigram_freqs(word_data, letters, cfg)
 
 	ngram_freqs = (letter_freqs, bigram_freqs)
 	return ngram_freqs
 end
 
-function score_layout!(layout, ngram_freqs, ngram_efforts, key_objects::Tuple, settings)::Float64
+function score_layout!(layout, ngram_freqs, ngram_efforts, key_objects::Tuple, cfg)::Float64
 
 	letter_freqs, bigram_freqs = ngram_freqs
 	letter_efforts, bigram_efforts = ngram_efforts
 
 	char_key_dict = make_char_dict(layout.layout_chars)
-	finger_load = get_finger_load(char_key_dict, letter_freqs, key_objects, settings)
+	finger_load = get_finger_load(char_key_dict, letter_freqs, key_objects, cfg)
 
 	letter_score = evaluate_letters(letter_freqs, letter_efforts, char_key_dict)
 	bigram_score = evaluate_bigrams(bigram_freqs, bigram_efforts, char_key_dict)
@@ -397,7 +397,7 @@ function score_layout!(layout, ngram_freqs, ngram_efforts, key_objects::Tuple, s
 	return score
 end
 
-function inspect_layout(layout::Layout, key_objects, letter_freqs, settings)
+function inspect_layout(layout::Layout, key_objects, letter_freqs, cfg)
 	char_key_dict = make_char_dict(layout.layout_chars)
 	finger_usage = zeros(Float64, 8)
 	for char in layout.layout_chars
@@ -422,7 +422,7 @@ function inspect_layout(layout::Layout, key_objects, letter_freqs, settings)
 	# println("effort: ", round(layout.score, digits=2))
 end
 
-function optimize_layout(settings)
+function optimize_layout(cfg)
 
 	key_objects = (
 		Key(false, 4, Offset(0.0, 1.0)),
@@ -457,19 +457,19 @@ function optimize_layout(settings)
 		# Key(true,  4, Offset(0.0, -1.0)),
 	)
 
-	ngram_efforts = get_ngram_efforts(key_objects, settings)
-	ngram_freqs = get_ngram_freqs(settings)
+	ngram_efforts = get_ngram_efforts(key_objects, cfg)
+	ngram_freqs = get_ngram_freqs(cfg)
 
-	generations = settings.generations
-	population = settings.population
-	children = settings.children
+	generations = cfg.generations
+	population = cfg.population
+	children = cfg.children
 
 	layouts::Vector{Layout} = []
 	for _ in 1:population
-		chars = get_char_array_rnd(key_objects, ngram_freqs[1], settings)
+		chars = get_char_array_rnd(key_objects, ngram_freqs[1], cfg)
 		layout = Layout(chars, Inf)
-		# normalize_vowels!(layout, settings.vowel_side)
-		score_layout!(layout, ngram_freqs, ngram_efforts, key_objects, settings)
+		# normalize_vowels!(layout, cfg.vowel_side)
+		score_layout!(layout, ngram_freqs, ngram_efforts, key_objects, cfg)
 		push!(layouts, layout)
 	end
 
@@ -486,9 +486,9 @@ function optimize_layout(settings)
 			while length(child_layouts) < children
 				tmp_layout = deepcopy(layout)
 				swap_keys!(tmp_layout)
-				# normalize_vowels!(tmp_layout, settings.vowel_side)
+				# normalize_vowels!(tmp_layout, cfg.vowel_side)
 				layout.layout_chars == tmp_layout.layout_chars && continue  # XXX
-				score_layout!(tmp_layout, ngram_freqs, ngram_efforts, key_objects, settings)
+				score_layout!(tmp_layout, ngram_freqs, ngram_efforts, key_objects, cfg)
 				count += 1
 				push!(child_layouts, tmp_layout)
 			end
@@ -507,7 +507,7 @@ function optimize_layout(settings)
 	println("\nspeed: ", speed, " l/s")
 	println("")
 	print_layout(last_best_layout)
-	inspect_layout(last_best_layout, key_objects, ngram_freqs[1], settings)
+	inspect_layout(last_best_layout, key_objects, ngram_freqs[1], cfg)
 	println("")
 
 end

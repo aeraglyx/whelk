@@ -7,8 +7,8 @@ include("structs.jl")
 include("functions.jl")
 
 function main()
-	settings = get_settings("config.toml")
-	@time optimize_layout(settings)
+	config = get_config("config.toml")
+	@time optimize_layout(config)
 end
 
 main()

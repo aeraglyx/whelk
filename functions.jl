@@ -334,7 +334,7 @@ function get_char_array(key_objects, letter_freqs, cfg)::Vector{Char}
 	return out
 end
 
-function get_char_array_rnd(key_objects, letter_freqs, cfg)::Vector{Char}
+function get_char_array_rnd(key_objects, letter_freqs)::Vector{Char}
 	letters = sort(collect(letter_freqs), by=x->x[2], rev=true)[1:26]
 	letters = [only(letter.first) for letter in letters]
 	return shuffle(letters)
@@ -397,7 +397,7 @@ function score_layout!(layout, ngram_freqs, ngram_efforts, key_objects::Tuple, c
 	return score
 end
 
-function inspect_layout(layout::Layout, key_objects, letter_freqs, cfg)
+function inspect_layout(layout::Layout, key_objects, letter_freqs)
 	char_key_dict = make_char_dict(layout.layout_chars)
 	finger_usage = zeros(Float64, 8)
 	for char in layout.layout_chars
@@ -461,7 +461,7 @@ function optimize_layout(cfg)
 
 	layouts::Vector{Layout} = []
 	for _ in 1:cfg.population
-		chars = get_char_array_rnd(key_objects, ngram_freqs[1], cfg)
+		chars = get_char_array_rnd(key_objects, ngram_freqs[1])
 		layout = Layout(chars, Inf)
 		# normalize_vowels!(layout, cfg.vowel_side)
 		score_layout!(layout, ngram_freqs, ngram_efforts, key_objects, cfg)
@@ -502,7 +502,7 @@ function optimize_layout(cfg)
 	println("\nspeed: ", speed, " l/s")
 	println("")
 	print_layout(last_best_layout)
-	inspect_layout(last_best_layout, key_objects, ngram_freqs[1], cfg)
+	inspect_layout(last_best_layout, key_objects, ngram_freqs[1])
 	println("")
 
 end

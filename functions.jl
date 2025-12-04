@@ -404,7 +404,7 @@ function optimize_layout(cfg)
 		layouts = discard_bad_layouts!(layouts, convert(Float64, cfg.population), 2.0)
 		last_best_layout = layouts[1]
 		last_best_effort = round(last_best_layout.score, digits=2)
-		print("\r$i/$cfg.generations | effort: $last_best_effort")
+		print("\r$i/$(cfg.generations) | effort: $last_best_effort")
 	end
 
 	speed = round(Int, count / (time() - t))

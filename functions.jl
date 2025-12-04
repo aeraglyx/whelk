@@ -500,8 +500,7 @@ function optimize_layout(settings)
 		layouts = discard_bad_layouts!(layouts, convert(Float64, population), 2.0)
 		last_best_layout = layouts[1]
 		last_best_effort = round(last_best_layout.score, digits=2)
-		current_population = length(layouts)
-		print("\r$i/$generations | effort: $last_best_effort | population: $current_population")
+		print("\r$i/$generations | effort: $last_best_effort")
 	end
 
 	speed = round(Int, count / (time() - t))

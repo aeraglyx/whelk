@@ -10,9 +10,11 @@ function get_letter_freqs(word_freq_data::Dict{String, Float64})
 	return letter_freqs
 end
 
+
 function ngrams_from_word(word, n)
 	return [view(word, i:i+n-1) for i = 1:length(word)-n+1]
 end
+
 
 function get_bigram_freqs_from_words(word_freq_data::Dict{String, Float64}, letters, skipgram_weight)
 	bigram_freqs = Dict{NTuple{2, Char}, Float64}()
@@ -34,6 +36,7 @@ function get_bigram_freqs_from_words(word_freq_data::Dict{String, Float64}, lett
 	normalize_dict!(bigram_freqs)
 	return bigram_freqs
 end
+
 
 function get_bigram_freqs_from_spaces(word_freq_data::Dict{String, Float64}, letters, skipgram_weight)
 	start_freqs = Dict{Char, Float64}()
@@ -62,6 +65,7 @@ function get_bigram_freqs_from_spaces(word_freq_data::Dict{String, Float64}, let
 	normalize_dict!(bigram_freqs)
 	return bigram_freqs
 end
+
 
 function get_bigram_freqs(word_freq_data::Dict{String, Float64}, letters, cfg)
 	freqs_from_words = get_bigram_freqs_from_words(word_freq_data, letters, cfg.skipgram_weight)

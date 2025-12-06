@@ -1,5 +1,3 @@
-import Unicode: isletter, normalize
-
 using TOML
 using HTTP
 using Random
@@ -123,8 +121,7 @@ function get_char_array_rnd(key_objects, letter_freqs)::Vector{Char}
 end
 
 
-function get_ngram_freqs(cfg)
-	word_data = get_word_data(cfg.langs)
+function get_ngram_freqs(word_data, cfg)
 	letter_freqs = get_letter_freqs(word_data)
 
 	letters = [only(letter.first) for letter in letter_freqs]
@@ -217,7 +214,8 @@ function optimize_layout(cfg)
 		# Key(true,  4, Offset(0.0, -1.0)),
 	)
 
-	ngram_freqs = get_ngram_freqs(cfg)
+	word_data = get_word_data(cfg.langs)
+	ngram_freqs = get_ngram_freqs(word_data, cfg)
 	ngram_efforts = get_ngram_efforts(key_objects, cfg)
 
 	layouts::Vector{Layout} = []

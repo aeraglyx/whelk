@@ -32,6 +32,11 @@ function normalize_word(word::String)::String
 end
 
 
+function substitute_repeat_keys(word::String)::String
+	return replace(word, r"(?<=(.))\1" => "@")
+end
+
+
 function get_word_data(langs::Dict{String, Any})::Dict{String, Float64}
 	data = Dict{String, Float64}()
 	for (lang, weight) in langs
@@ -42,6 +47,7 @@ function get_word_data(langs::Dict{String, Any})::Dict{String, Float64}
 		for line in eachline(IOBuffer(data_raw))
 			word, freq = split(line, " ")
 			word = normalize_word(string(word))
+			word = substitute_repeat_keys(word)
 			freq = parse(UInt, freq)
 			freq_total += freq
 			data_per_lang[word] = get!(data_per_lang, word, 0) + freq

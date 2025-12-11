@@ -5,7 +5,8 @@ function get_letter_freqs(word_freq_data::Dict{String, Float64})
 			letter_freqs[letter] = get!(letter_freqs, letter, 0.0) + freq
 		end
 	end
-	letter_freqs = Dict(sort(collect(letter_freqs), by=x->x[2], rev=true)[1:26])
+	letter_freqs = Dict(sort(collect(letter_freqs), by=x->x[2], rev=true)[1:27])
+	letter_freqs[' '] = 0.14
 	normalize_dict!(letter_freqs)
 	return letter_freqs
 end

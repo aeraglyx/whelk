@@ -72,7 +72,7 @@ end
 
 
 function make_char_dict(layout_chars)::Dict{Char, UInt8}
-	char_key_dict::Dict{Char, UInt8} = Dict(layout_chars[i] => i for i in 1:26)
+	char_key_dict::Dict{Char, UInt8} = Dict(layout_chars[i] => i for i in eachindex(layout_chars))
 	return char_key_dict
 end
 
@@ -99,23 +99,23 @@ end
 
 function get_finger_load(char_key_dict, letter_freqs, key_objects, cfg)::Float64
 
-	finger_load::Vector{Float64} = zeros(8)
+	finger_load::Vector{Float64} = zeros(10)
 	sum_thingy = sum(1 ./ cfg.finger_strengths)
 	for (char, key_idx) in char_key_dict
 		key = key_objects[key_idx]
-		finger_idx = key.hand ? 4 + key.finger : 5 - key.finger
+		finger_idx = key.hand ? 5 + key.finger : 6 - key.finger
 		strength = cfg.finger_strengths[key.finger]
 		finger_load[finger_idx] += letter_freqs[char] / strength * sum_thingy
 	end
 
 	balance = cfg.enforce_balance
 	# NOTE: *2 is like ^2 for the original finger loads
-	return 2 ^ (balance * sum(abs.(log2.(finger_load) .* 2)) / 8)
+	return 2 ^ (balance * sum(abs.(log2.(finger_load) .* 2)) / 10)
 end
 
 
 function get_char_array_rnd(key_objects, letter_freqs)::Vector{Char}
-	letters = sort(collect(letter_freqs), by=x->x[2], rev=true)[1:26]
+	letters = sort(collect(letter_freqs), by=x->x[2], rev=true)[eachindex(key_objects)]
 	letters = [only(letter.first) for letter in letters]
 	return shuffle(letters)
 end
@@ -149,32 +149,31 @@ end
 
 function print_layout(layout::Layout)
 	chars = layout.layout_chars
+	chars = replace(chars, ' ' => '␣')
 	space_str = "  "
 	println(join(chars[1:5],   space_str), space_str, join(chars[6:10],  space_str))
 	println(join(chars[11:15], space_str), space_str, join(chars[16:20], space_str))
 	println(join(chars[21:25], space_str), space_str, "'  ", chars[26], "  ,  .  /")
+	println("      ", chars[27], "     ", chars[28])
 end
 
 
 function inspect_layout(layout::Layout, key_objects, letter_freqs)
 	char_key_dict = make_char_dict(layout.layout_chars)
-	finger_usage = zeros(Float64, 8)
+	finger_usage = zeros(Float64, 10)
 	for char in layout.layout_chars
 		key::Key = key_objects[char_key_dict[char][1]]
 		i = key.finger
 		if key.hand
-			i = 4 + i
+			i = 5 + i
 		else
-			i = 5 - i
+			i = 6 - i
 		end
 		finger_usage[i] += letter_freqs[char]
 	end
-	for (i, finger) in enumerate(finger_usage)
-		print(string(Int(round(100 * finger)), pad=2), " ")
-		if i == 4
-			print("     ")
-		end
-	end
+	finger_usage_str = string.(Int.(round.(100 * finger_usage)), pad=2)
+	println(join(finger_usage_str[1:4], " "), " ", join(finger_usage_str[7:10], " "))
+	println("         ", finger_usage_str[5], " ", finger_usage_str[6])
 	println("")
 end
 
@@ -182,36 +181,38 @@ end
 function optimize_layout(cfg)
 
 	key_objects = (
+		Key(false, 5, Offset(0.0, 1.0)),
 		Key(false, 4, Offset(0.0, 1.0)),
 		Key(false, 3, Offset(0.0, 1.0)),
 		Key(false, 2, Offset(0.0, 1.0)),
-		Key(false, 1, Offset(0.0, 1.0)),
-		Key(false, 1, Offset(1.0, 1.0)),
-		Key(true,  1, Offset(-1.0, 1.0)),
-		Key(true,  1, Offset(0.0, 1.0)),
+		Key(false, 2, Offset(1.0, 1.0)),
+		Key(true,  2, Offset(-1.0, 1.0)),
 		Key(true,  2, Offset(0.0, 1.0)),
 		Key(true,  3, Offset(0.0, 1.0)),
 		Key(true,  4, Offset(0.0, 1.0)),
+		Key(true,  5, Offset(0.0, 1.0)),
+		Key(false, 5, Offset(0.0, 0.0)),
 		Key(false, 4, Offset(0.0, 0.0)),
 		Key(false, 3, Offset(0.0, 0.0)),
 		Key(false, 2, Offset(0.0, 0.0)),
-		Key(false, 1, Offset(0.0, 0.0)),
-		Key(false, 1, Offset(1.0, 0.0)),
-		Key(true,  1, Offset(-1.0, 0.0)),
-		Key(true,  1, Offset(0.0, 0.0)),
+		Key(false, 2, Offset(1.0, 0.0)),
+		Key(true,  2, Offset(-1.0, 0.0)),
 		Key(true,  2, Offset(0.0, 0.0)),
 		Key(true,  3, Offset(0.0, 0.0)),
 		Key(true,  4, Offset(0.0, 0.0)),
+		Key(true,  5, Offset(0.0, 0.0)),
+		Key(false, 5, Offset(0.0, -1.0)),
 		Key(false, 4, Offset(0.0, -1.0)),
 		Key(false, 3, Offset(0.0, -1.0)),
 		Key(false, 2, Offset(0.0, -1.0)),
-		Key(false, 1, Offset(0.0, -1.0)),
-		Key(false, 1, Offset(1.0, -1.0)),
-		# Key(true , 1, Offset(-1.0, -1.0)),
-		Key(true,  1, Offset(0.0, -1.0)),
-		# Key(true,  2, Offset(0.0, -1.0)),
+		Key(false, 2, Offset(1.0, -1.0)),
+		# Key(true , 2, Offset(-1.0, -1.0)),
+		Key(true,  2, Offset(0.0, -1.0)),
 		# Key(true,  3, Offset(0.0, -1.0)),
 		# Key(true,  4, Offset(0.0, -1.0)),
+		# Key(true,  5, Offset(0.0, -1.0)),
+		Key(false,  1, Offset(0.0, 0.0)),
+		Key(true,  1, Offset(0.0, 0.0)),
 	)
 
 	word_data = get_word_data(cfg.langs)

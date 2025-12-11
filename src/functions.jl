@@ -97,20 +97,23 @@ function evaluate_bigrams(bigram_freqs, bigram_efforts, char_key_dict)::Float64
 end
 
 
-function get_finger_load(char_key_dict, letter_freqs, key_objects, cfg)::Float64
-
-	finger_load::Vector{Float64} = zeros(10)
-	sum_thingy = sum(1 ./ cfg.finger_strengths)
+function get_finger_usage(char_key_dict, letter_freqs, key_objects)::Vector{Float64}
+	finger_usage::Vector{Float64} = zeros(10)
 	for (char, key_idx) in char_key_dict
 		key = key_objects[key_idx]
-		finger_idx = key.hand ? 5 + key.finger : 6 - key.finger
-		strength = cfg.finger_strengths[key.finger]
-		finger_load[finger_idx] += letter_freqs[char] / strength * sum_thingy
+		finger_id = key.hand ? 5 + key.finger : 6 - key.finger
+		finger_usage[finger_id] += letter_freqs[char]
 	end
+	return finger_usage
+end
 
-	balance = cfg.enforce_balance
-	# NOTE: *2 is like ^2 for the original finger loads
-	return 2 ^ (balance * sum(abs.(log2.(finger_load) .* 2)) / 10)
+
+function get_finger_load(char_key_dict, letter_freqs, key_objects, cfg)::Float64
+	finger_usage = get_finger_usage(char_key_dict, letter_freqs, key_objects)
+    finger_strengths = cfg.finger_strengths[[5:-1:1; 1:5]]
+    finger_strengths ./= sum(finger_strengths)
+	finger_load = finger_usage ./ finger_strengths
+    return 2 ^ (cfg.enforce_balance * sum(abs.(log2.(finger_load))) / 10)
 end
 
 
@@ -160,17 +163,7 @@ end
 
 function inspect_layout(layout::Layout, key_objects, letter_freqs)
 	char_key_dict = make_char_dict(layout.layout_chars)
-	finger_usage = zeros(Float64, 10)
-	for char in layout.layout_chars
-		key::Key = key_objects[char_key_dict[char][1]]
-		i = key.finger
-		if key.hand
-			i = 5 + i
-		else
-			i = 6 - i
-		end
-		finger_usage[i] += letter_freqs[char]
-	end
+	finger_usage = get_finger_usage(char_key_dict, letter_freqs, key_objects)
 	finger_usage_str = string.(Int.(round.(100 * finger_usage)), pad=2)
 	println(join(finger_usage_str[1:4], " "), " ", join(finger_usage_str[7:10], " "))
 	println("         ", finger_usage_str[5], " ", finger_usage_str[6])

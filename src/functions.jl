@@ -153,10 +153,9 @@ end
 function print_layout(layout::Layout)
 	chars = layout.layout_chars
 	chars = replace(chars, ' ' => '␣')
-	space_str = "  "
-	println(join(chars[1:5],   space_str), space_str, join(chars[6:10],  space_str))
-	println(join(chars[11:15], space_str), space_str, join(chars[16:20], space_str))
-	println(join(chars[21:25], space_str), space_str, "'  ", chars[26], "  ,  .  /")
+	println(join(chars[[ 1: 5;  6:10]], " "))
+	println(join(chars[[11:15; 16:20]], " "))
+    println(join(vcat(chars[21:25], '\'', chars[26], ',', '.', '/'), " "))
 	println("      ", chars[27], "     ", chars[28])
 end
 
@@ -255,6 +254,7 @@ function optimize_layout(cfg)
 	println("\nspeed: ", speed, " l/s")
 	println("")
 	print_layout(last_best_layout)
+	println("")
 	inspect_layout(last_best_layout, key_objects, ngram_freqs[1])
 	println("")
 

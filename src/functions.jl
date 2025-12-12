@@ -222,6 +222,7 @@ function optimize_layout(cfg)
 
 	sort!(layouts, by=layout->layout.score, rev=false)
 	last_best_layout::Layout = layouts[1]
+	last_improvement_gen = 1
 	count = 0
 	t = time()
 	println("initializing...")
@@ -245,9 +246,15 @@ function optimize_layout(cfg)
 		end
 		sort!(layouts, by=layout->layout.score, rev=false)
 		layouts = discard_bad_layouts!(layouts, convert(Float64, cfg.population), 2.0)
+		if layouts[1] != last_best_layout
+			last_improvement_gen = i
+		end
 		last_best_layout = layouts[1]
 		last_best_effort = round(last_best_layout.score, digits=2)
 		print("\r$i/$(cfg.generations) | effort: $last_best_effort")
+		if i - last_improvement_gen > 16
+			break
+		end
 	end
 
 	speed = round(Int, count / (time() - t))

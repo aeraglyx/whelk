@@ -24,3 +24,12 @@ independence     = 0.5  # makes far away bigrams less significant
 prefer_home      = 1.5  # non home row effort (quadratic with distance)
 enforce_balance  = 1.5  # try to match finger load to finger strengths
 vowel_side       = true # false for left, true for right
+
+
+# replace ~ to pin certain letters, use ␣ for space, @ for repeat key
+letters = """
+~ ~ ~ ~ ~ ~ ~ ~ ~ ~
+~ ~ ~ ~ ~ ~ ~ ~ ~ ~
+~ ~ ~ ~ ~ ~ ~ ~ ~ ~
+      ␣     @
+"""

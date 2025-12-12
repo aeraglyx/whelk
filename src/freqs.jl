@@ -6,8 +6,22 @@ function get_letter_freqs(word_freq_data::Dict{String, Float64})
 		end
 	end
 	letter_freqs = Dict(sort(collect(letter_freqs), by=x->x[2], rev=true)[1:27])
-	letter_freqs[' '] = 0.14
 	normalize_dict!(letter_freqs)
+
+	non_alpha_freqs = Dict(
+		' ' => 0.140,
+		'.' => 0.010,
+		',' => 0.008,
+		'\''=> 0.006,
+		'/' => 0.001
+	)
+
+	for key in keys(letter_freqs)
+		letter_freqs[key] *= 1.0 - sum(values(non_alpha_freqs))
+	end
+	merge!(letter_freqs, non_alpha_freqs)
+
+	@assert isapprox(sum(values(letter_freqs)), 1.0)
 	return letter_freqs
 end
 

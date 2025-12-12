@@ -36,13 +36,12 @@ function discard_bad_layouts!(layouts, pivot::Float64, g::Float64)
 end
 
 
-function swap_keys!(layout::Layout)
+function swap_keys!(layout::Layout, ids_to_swap)
 	chars = layout.layout_chars
-	n = length(chars)
 	k::UInt8 = rand(1:5)
 	for _ in 1:k
-		rnd1::UInt8 = rand(1:n)
-		rnd2::UInt8 = rand(1:n)
+		rnd1::UInt8 = rand(ids_to_swap)
+		rnd2::UInt8 = rand(ids_to_swap)
 		chars[rnd1], chars[rnd2] = chars[rnd2], chars[rnd1]
 	end
 end
@@ -117,10 +116,36 @@ function get_finger_load(char_key_dict, letter_freqs, key_objects, cfg)::Float64
 end
 
 
-function get_char_array_rnd(key_objects, letter_freqs)::Vector{Char}
-	letters = sort(collect(letter_freqs), by=x->x[2], rev=true)[eachindex(key_objects)]
-	letters = [only(letter.first) for letter in letters]
-	return shuffle(letters)
+function get_ids_to_swap(letters)::Vector{Int}
+	letters = collect(letters)
+	letters = filter(!isspace, letters)
+	letters = replace(letters, '␣' => ' ')
+	ids = [i for (i, letter) in enumerate(letters) if letter == '~']
+	return ids
+end
+
+
+function get_char_array_rnd(key_objects, letter_freqs, letters_fixed)::Vector{Char}
+    letters_fixed = collect(letters_fixed)
+    letters_fixed = filter(!isspace, letters_fixed)
+    letters_fixed = replace(letters_fixed, '␣' => ' ')
+	ids_to_swap = [i for (i, letter) in enumerate(letters_fixed) if letter == '~']
+
+	letters_shuffled = filter(((k, v),) -> !(k in letters_fixed), letter_freqs)
+	n_shuffled = length(ids_to_swap)
+	letters_shuffled = sort(collect(letters_shuffled), by=x->x[2], rev=true)[1:n_shuffled]
+	letters_shuffled = [only(letter.first) for letter in letters_shuffled]
+	letters_shuffled = shuffle(letters_shuffled)
+
+	letters::Vector{Char} = []
+	for i in eachindex(key_objects)
+		if i in ids_to_swap
+			append!(letters, pop!(letters_shuffled))
+		else
+			append!(letters, letters_fixed[i])
+		end
+	end
+	return letters
 end
 
 
@@ -155,8 +180,8 @@ function print_layout(layout::Layout)
 	chars = replace(chars, ' ' => '␣')
 	println(join(chars[[ 1: 5;  6:10]], " "))
 	println(join(chars[[11:15; 16:20]], " "))
-    println(join(vcat(chars[21:25], '\'', chars[26], ',', '.', '/'), " "))
-	println("      ", chars[27], "     ", chars[28])
+	println(join(chars[[21:25; 26:30]], " "))
+	println("      ", chars[31], "     ", chars[32])
 end
 
 
@@ -183,6 +208,7 @@ function optimize_layout(cfg)
 		Key(true,  3, Offset(0.0, 1.0)),
 		Key(true,  4, Offset(0.0, 1.0)),
 		Key(true,  5, Offset(0.0, 1.0)),
+
 		Key(false, 5, Offset(0.0, 0.0)),
 		Key(false, 4, Offset(0.0, 0.0)),
 		Key(false, 3, Offset(0.0, 0.0)),
@@ -193,16 +219,18 @@ function optimize_layout(cfg)
 		Key(true,  3, Offset(0.0, 0.0)),
 		Key(true,  4, Offset(0.0, 0.0)),
 		Key(true,  5, Offset(0.0, 0.0)),
+
 		Key(false, 5, Offset(0.0, -1.0)),
 		Key(false, 4, Offset(0.0, -1.0)),
 		Key(false, 3, Offset(0.0, -1.0)),
 		Key(false, 2, Offset(0.0, -1.0)),
 		Key(false, 2, Offset(1.0, -1.0)),
-		# Key(true , 2, Offset(-1.0, -1.0)),
+		Key(true , 2, Offset(-1.0, -1.0)),
 		Key(true,  2, Offset(0.0, -1.0)),
-		# Key(true,  3, Offset(0.0, -1.0)),
-		# Key(true,  4, Offset(0.0, -1.0)),
-		# Key(true,  5, Offset(0.0, -1.0)),
+		Key(true,  3, Offset(0.0, -1.0)),
+		Key(true,  4, Offset(0.0, -1.0)),
+		Key(true,  5, Offset(0.0, -1.0)),
+
 		Key(false,  1, Offset(0.0, 0.0)),
 		Key(true,  1, Offset(0.0, 0.0)),
 	)
@@ -210,10 +238,11 @@ function optimize_layout(cfg)
 	word_data = get_word_data(cfg.langs)
 	ngram_freqs = get_ngram_freqs(word_data, cfg)
 	ngram_efforts = get_ngram_efforts(key_objects, cfg)
+	ids_to_swap = get_ids_to_swap(cfg.letters)
 
 	layouts::Vector{Layout} = []
 	for _ in 1:cfg.population
-		chars = get_char_array_rnd(key_objects, ngram_freqs[1])
+		chars = get_char_array_rnd(key_objects, ngram_freqs[1], cfg.letters)
 		layout = Layout(chars, Inf)
 		# normalize_vowels!(layout, cfg.vowel_side)
 		score_layout!(layout, ngram_freqs, ngram_efforts, key_objects, cfg)
@@ -233,7 +262,7 @@ function optimize_layout(cfg)
 			# TODO: fewer children for bad parents?
 			while length(child_layouts) < cfg.children
 				tmp_layout = deepcopy(layout)
-				swap_keys!(tmp_layout)
+				swap_keys!(tmp_layout, ids_to_swap)
 				# normalize_vowels!(tmp_layout, cfg.vowel_side)
 				layout.layout_chars == tmp_layout.layout_chars && continue  # XXX
 				score_layout!(tmp_layout, ngram_freqs, ngram_efforts, key_objects, cfg)

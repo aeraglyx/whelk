@@ -35,8 +35,6 @@ x h j g w ' k , . /
 
 ## TODO
 
-- Shuffle all keys, not just the alphas
-- Pin letters
 - Use corpus as a source to get better skipgram information around words and punctuation
 - Plot the effort over time and optimize the generation algorithm
 - Calculate all stats, not just the overall effort

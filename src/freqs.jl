@@ -39,7 +39,7 @@ function get_bigram_freqs_from_words(word_freq_data::Dict{String, Float64}, lett
 end
 
 
-function get_bigram_freqs_from_spaces(word_freq_data::Dict{String, Float64}, letters, skipgram_weight)
+function get_bigram_freqs_from_spaces(word_freq_data::Dict{String, Float64}, skipgram_weight)
 	start_freqs = Dict{Char, Float64}()
 	end_freqs = Dict{Char, Float64}()
 
@@ -70,7 +70,7 @@ end
 
 function get_bigram_freqs(word_freq_data::Dict{String, Float64}, letters, cfg)
 	freqs_from_words = get_bigram_freqs_from_words(word_freq_data, letters, cfg.skipgram_weight)
-	freqs_from_spaces = get_bigram_freqs_from_spaces(word_freq_data, letters, cfg.skipgram_weight)
+	freqs_from_spaces = get_bigram_freqs_from_spaces(word_freq_data, cfg.skipgram_weight)
 
 	typical_word_length = 5
 	space_weight = 0.75 * cfg.skipgram_weight / (typical_word_length + 1)

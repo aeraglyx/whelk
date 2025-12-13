@@ -97,7 +97,7 @@ function get_bigram_freqs(word_freq_data::Dict{String, Float64}, letters, cfg)
 
 	bigrams_total = length(bigram_freqs)
 	bigram_freqs = filter_dict(bigram_freqs, cfg.bigram_quality)
-	println(length(bigram_freqs), "/", bigrams_total, " bigrams")
+	@info "$(length(bigram_freqs))/$bigrams_total bigrams"
 
 	normalize_dict!(bigram_freqs)
 	return bigram_freqs

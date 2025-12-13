@@ -38,7 +38,6 @@ x h j g w ' k , . /
 - Use corpus as a source to get better skipgram information around words and punctuation
 - Plot the effort over time and optimize the generation algorithm
 - Calculate all stats, not just the overall effort
-- Multithreading
 - Matrix math
 - Check visited layouts
 - Efforts in log space for performance

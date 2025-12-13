@@ -195,6 +195,60 @@ function inspect_layout(layout::Layout, key_objects, letter_freqs)
 end
 
 
+function optimize_layout_single(data, cfg)
+
+	key_objects, ngram_freqs, ngram_efforts, ids_to_swap = data
+
+	layouts::Vector{Layout} = []
+	for _ in 1:cfg.population
+		chars = get_char_array_rnd(key_objects, ngram_freqs[1], cfg.letters)
+		layout = Layout(chars, Inf)
+		# normalize_vowels!(layout, cfg.vowel_side)
+		score_layout!(layout, ngram_freqs, ngram_efforts, key_objects, cfg)
+		push!(layouts, layout)
+	end
+
+	sort!(layouts, by=layout->layout.score, rev=false)
+	last_best_layout::Layout = layouts[1]
+	last_improvement_gen = 1
+	count = 0
+	t = time()
+
+	for i in 1:cfg.generations
+		for layout in layouts[:]
+			child_layouts::Vector{Layout} = []
+			# TODO: fewer children for bad parents?
+			while length(child_layouts) < cfg.children
+				tmp_layout = deepcopy(layout)
+				swap_keys!(tmp_layout, ids_to_swap)
+				# normalize_vowels!(tmp_layout, cfg.vowel_side)
+				layout.layout_chars == tmp_layout.layout_chars && continue  # XXX
+				score_layout!(tmp_layout, ngram_freqs, ngram_efforts, key_objects, cfg)
+				count += 1
+				push!(child_layouts, tmp_layout)
+			end
+			sort!(child_layouts, by=layout->layout.score, rev=false)
+			child_layouts = discard_bad_layouts!(child_layouts, convert(Float64, cfg.children), 2.0)
+			append!(layouts, child_layouts)
+		end
+		sort!(layouts, by=layout->layout.score, rev=false)
+		layouts = discard_bad_layouts!(layouts, convert(Float64, cfg.population), 2.0)
+		if layouts[1] != last_best_layout
+			last_improvement_gen = i
+		end
+		last_best_layout = layouts[1]
+		# last_best_effort = round(last_best_layout.score, digits=2)
+		# print("\r$i/$(cfg.generations) | effort: $last_best_effort")
+		if i - last_improvement_gen > 64
+			break
+		end
+	end
+
+	speed = round(Int, count / (time() - t))
+	return last_best_layout, speed
+end
+
+
 function optimize_layout(cfg)
 
 	key_objects = (
@@ -231,67 +285,46 @@ function optimize_layout(cfg)
 		Key(true,  4, Offset(0.0, -1.0)),
 		Key(true,  5, Offset(0.0, -1.0)),
 
-		Key(false,  1, Offset(0.0, 0.0)),
+		Key(false, 1, Offset(0.0, 0.0)),
 		Key(true,  1, Offset(0.0, 0.0)),
 	)
+
+	@info "initializing..."
 
 	word_data = get_word_data(cfg.langs)
 	ngram_freqs = get_ngram_freqs(word_data, cfg)
 	ngram_efforts = get_ngram_efforts(key_objects, cfg)
 	ids_to_swap = get_ids_to_swap(cfg.letters)
 
-	layouts::Vector{Layout} = []
-	for _ in 1:cfg.population
-		chars = get_char_array_rnd(key_objects, ngram_freqs[1], cfg.letters)
-		layout = Layout(chars, Inf)
-		# normalize_vowels!(layout, cfg.vowel_side)
-		score_layout!(layout, ngram_freqs, ngram_efforts, key_objects, cfg)
-		push!(layouts, layout)
+	data = key_objects, ngram_freqs, ngram_efforts, ids_to_swap
+
+	t = time()
+
+	threads_available = Threads.nthreads()
+
+	if threads_available == 1 @warn "using only 1 thread"
+	else @info "using $threads_available threads" end
+
+	total = 1:threads_available
+	chunks = Iterators.partition(total, cld(length(total), threads_available))
+
+	@info "optimizing layout..."
+	tasks = map(chunks) do chunk
+		Threads.@spawn optimize_layout_single(data, cfg)
 	end
+
+	results = fetch.(tasks)
+	layouts, speeds = map(collect, zip(results...))
 
 	sort!(layouts, by=layout->layout.score, rev=false)
-	last_best_layout::Layout = layouts[1]
-	last_improvement_gen = 1
-	count = 0
-	t = time()
-	println("initializing...")
+	@info "best scores: $(string([round(layout.score, digits=1) for layout in layouts]))"
+	best_layout = layouts[1]
 
-	for i in 1:cfg.generations
-		for layout in layouts[:]
-			child_layouts::Vector{Layout} = []
-			# TODO: fewer children for bad parents?
-			while length(child_layouts) < cfg.children
-				tmp_layout = deepcopy(layout)
-				swap_keys!(tmp_layout, ids_to_swap)
-				# normalize_vowels!(tmp_layout, cfg.vowel_side)
-				layout.layout_chars == tmp_layout.layout_chars && continue  # XXX
-				score_layout!(tmp_layout, ngram_freqs, ngram_efforts, key_objects, cfg)
-				count += 1
-				push!(child_layouts, tmp_layout)
-			end
-			sort!(child_layouts, by=layout->layout.score, rev=false)
-			child_layouts = discard_bad_layouts!(child_layouts, convert(Float64, cfg.children), 2.0)
-			append!(layouts, child_layouts)
-		end
-		sort!(layouts, by=layout->layout.score, rev=false)
-		layouts = discard_bad_layouts!(layouts, convert(Float64, cfg.population), 2.0)
-		if layouts[1] != last_best_layout
-			last_improvement_gen = i
-		end
-		last_best_layout = layouts[1]
-		last_best_effort = round(last_best_layout.score, digits=2)
-		print("\r$i/$(cfg.generations) | effort: $last_best_effort")
-		if i - last_improvement_gen > 16
-			break
-		end
-	end
-
-	speed = round(Int, count / (time() - t))
-	println("\nspeed: ", speed, " l/s")
-	println("")
-	print_layout(last_best_layout)
-	println("")
-	inspect_layout(last_best_layout, key_objects, ngram_freqs[1])
+	@info "speed: $(sum(speeds)) l/s"
 	println("")
 
+	print_layout(best_layout)
+	println("")
+	# inspect_layout(best_layout, key_objects, ngram_freqs[1])
+	# println("")
 end

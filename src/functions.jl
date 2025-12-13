@@ -48,19 +48,23 @@ end
 
 
 function mirror_index(x::Int)::Int
-	return ((x - 1) ÷ 8) * 8 + 8 - (x - 1) % 8
+	if x < 31
+		return 9 - 2 * (x - 1) % 20 + x
+	else
+		return 63 - x
+	end
 end
 
 
 function mirror_chars(chars)
-	perm = [mirror_index(x) for x in 1:24]
+	perm = [x < 31 ? mirror_index(x) : x for x in eachindex(chars)]
 	return chars[perm]
 end
 
 
 function normalize_vowels!(layout::Layout, vowel_side)
 	chars = layout.layout_chars
-	left_chars = chars[[1:4; 9:12; 17:20]]
+	left_chars = chars[[1:5; 11:15; 21:25; 31]]
 	vowels = ['a', 'e', 'i', 'y', 'o', 'u']
 	n = length(intersect(left_chars, vowels))
 	if (!vowel_side && n < 3) || (vowel_side && n > 3)

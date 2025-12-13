@@ -198,6 +198,45 @@ function inspect_layout(layout::Layout, key_objects, letter_freqs)
 	println("")
 end
 
+function get_key_objects()
+	return (
+		Key(false, 5, Offset(0.0, 1.0)),
+		Key(false, 4, Offset(0.0, 1.0)),
+		Key(false, 3, Offset(0.0, 1.0)),
+		Key(false, 2, Offset(0.0, 1.0)),
+		Key(false, 2, Offset(1.0, 1.0)),
+		Key(true,  2, Offset(-1.0, 1.0)),
+		Key(true,  2, Offset(0.0, 1.0)),
+		Key(true,  3, Offset(0.0, 1.0)),
+		Key(true,  4, Offset(0.0, 1.0)),
+		Key(true,  5, Offset(0.0, 1.0)),
+
+		Key(false, 5, Offset(0.0, 0.0)),
+		Key(false, 4, Offset(0.0, 0.0)),
+		Key(false, 3, Offset(0.0, 0.0)),
+		Key(false, 2, Offset(0.0, 0.0)),
+		Key(false, 2, Offset(1.0, 0.0)),
+		Key(true,  2, Offset(-1.0, 0.0)),
+		Key(true,  2, Offset(0.0, 0.0)),
+		Key(true,  3, Offset(0.0, 0.0)),
+		Key(true,  4, Offset(0.0, 0.0)),
+		Key(true,  5, Offset(0.0, 0.0)),
+
+		Key(false, 5, Offset(0.0, -1.0)),
+		Key(false, 4, Offset(0.0, -1.0)),
+		Key(false, 3, Offset(0.0, -1.0)),
+		Key(false, 2, Offset(0.0, -1.0)),
+		Key(false, 2, Offset(1.0, -1.0)),
+		Key(true , 2, Offset(-1.0, -1.0)),
+		Key(true,  2, Offset(0.0, -1.0)),
+		Key(true,  3, Offset(0.0, -1.0)),
+		Key(true,  4, Offset(0.0, -1.0)),
+		Key(true,  5, Offset(0.0, -1.0)),
+
+		Key(false, 1, Offset(0.0, 0.0)),
+		Key(true,  1, Offset(0.0, 0.0)),
+	)
+end
 
 function optimize_layout_single(data, cfg)
 
@@ -255,46 +294,9 @@ end
 
 function optimize_layout(cfg)
 
-	key_objects = (
-		Key(false, 5, Offset(0.0, 1.0)),
-		Key(false, 4, Offset(0.0, 1.0)),
-		Key(false, 3, Offset(0.0, 1.0)),
-		Key(false, 2, Offset(0.0, 1.0)),
-		Key(false, 2, Offset(1.0, 1.0)),
-		Key(true,  2, Offset(-1.0, 1.0)),
-		Key(true,  2, Offset(0.0, 1.0)),
-		Key(true,  3, Offset(0.0, 1.0)),
-		Key(true,  4, Offset(0.0, 1.0)),
-		Key(true,  5, Offset(0.0, 1.0)),
-
-		Key(false, 5, Offset(0.0, 0.0)),
-		Key(false, 4, Offset(0.0, 0.0)),
-		Key(false, 3, Offset(0.0, 0.0)),
-		Key(false, 2, Offset(0.0, 0.0)),
-		Key(false, 2, Offset(1.0, 0.0)),
-		Key(true,  2, Offset(-1.0, 0.0)),
-		Key(true,  2, Offset(0.0, 0.0)),
-		Key(true,  3, Offset(0.0, 0.0)),
-		Key(true,  4, Offset(0.0, 0.0)),
-		Key(true,  5, Offset(0.0, 0.0)),
-
-		Key(false, 5, Offset(0.0, -1.0)),
-		Key(false, 4, Offset(0.0, -1.0)),
-		Key(false, 3, Offset(0.0, -1.0)),
-		Key(false, 2, Offset(0.0, -1.0)),
-		Key(false, 2, Offset(1.0, -1.0)),
-		Key(true , 2, Offset(-1.0, -1.0)),
-		Key(true,  2, Offset(0.0, -1.0)),
-		Key(true,  3, Offset(0.0, -1.0)),
-		Key(true,  4, Offset(0.0, -1.0)),
-		Key(true,  5, Offset(0.0, -1.0)),
-
-		Key(false, 1, Offset(0.0, 0.0)),
-		Key(true,  1, Offset(0.0, 0.0)),
-	)
-
 	@info "initializing..."
 
+	key_objects = get_key_objects()
 	word_data = get_word_data(cfg.langs)
 	ngram_freqs = get_ngram_freqs(word_data, cfg)
 	ngram_efforts = get_ngram_efforts(key_objects, cfg)

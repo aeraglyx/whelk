@@ -116,7 +116,7 @@ function get_finger_load(char_key_dict, letter_freqs, key_objects, cfg)::Float64
     finger_strengths = cfg.finger_strengths[[5:-1:1; 1:5]]
     finger_strengths ./= sum(finger_strengths)
 	finger_load = finger_usage ./ finger_strengths
-    return 2 ^ (cfg.enforce_balance * sum(abs.(log2.(finger_load))) / 10)
+	return cfg.enforce_balance * sum(abs.(log2.(finger_load))) / 10
 end
 
 
@@ -175,7 +175,7 @@ function score_layout!(layout, ngram_freqs, ngram_efforts, key_objects::Tuple, c
 	# letter_score = evaluate_letters(letter_freqs, letter_efforts, char_key_dict)
 	bigram_score = evaluate_bigrams(bigram_freqs, bigram_efforts, char_key_dict)
 
-	layout.score = bigram_score * finger_load
+	layout.score = bigram_score + finger_load
 end
 
 

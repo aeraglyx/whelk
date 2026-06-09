@@ -40,7 +40,6 @@ x h j g w ' k , . /
 - Calculate all stats, not just the overall effort
 - Matrix math
 - Check visited layouts
-- Efforts in log space for performance
 
 
 ## Attributions

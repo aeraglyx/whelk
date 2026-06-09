@@ -32,23 +32,23 @@ function bigram_effort(key_1::Key, key_2::Key, cfg)::Float64
 	finger_diff = key_2.finger - key_1.finger
 	x = key_2.offset.x - key_1.offset.x
 	y = key_2.offset.y - key_1.offset.y
-	displacement = cfg.lateral * x*x + y*y
+	displacement = sqrt(cfg.lateral * x*x + y*y)
 
 	if finger_diff == 0
-		effort *= 1.0 + cfg.sfb * displacement / cfg.finger_dexterity[key_1.finger]
+		effort *= cfg.sfb ^ (displacement / cfg.finger_dexterity[key_1.finger])
 		y < 0 && (effort *= cfg.top_to_bottom)
 		y > 0 && (effort /= cfg.top_to_bottom)
 	else
 		dexterity_integrated = get_dexterity_integrated(cfg.finger_dexterity)
 		bigram_dexterity = abs(dexterity_integrated[key_2.finger] - dexterity_integrated[key_1.finger])
 		dependence = 0.5 ^ (bigram_dexterity * cfg.independence)
-		y != 0 && (effort *= 1.0 + cfg.scissor * displacement * dependence)
+		y != 0 && (effort *= cfg.scissor ^ (displacement * dependence))
 		finger_diff < 0 && (effort *= cfg.inroll)
 		finger_diff > 0 && (effort /= cfg.inroll)
 	end
 
 	effort *= cfg.one_hand
-	return effort
+	return log2(effort)
 end
 
 

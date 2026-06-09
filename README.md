@@ -2,7 +2,7 @@
 
 A simple, relatively fast keyboard layout generator with support for multiple languages.
 
-At 0.98 bigram coverage, I'm getting roughly 85K layouts/s on my machine. Here's an example English layout generated using the default settings:
+At 0.98 bigram coverage, I'm getting almost 500K layouts/s on my machine. Here's an example English layout generated using the default settings:
 
 ```
 f b l c p z m o u q

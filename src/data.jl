@@ -39,6 +39,7 @@ end
 
 function get_word_data(langs::Dict{String, Any})::Dict{String, Float64}
 	data = Dict{String, Float64}()
+	mkdir("data")
 	for (lang, weight) in langs
 		weight == 0.0 && continue
 		data_per_lang = Dict{String, UInt}()
